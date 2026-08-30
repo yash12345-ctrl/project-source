@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Subject {
+  id        Int        @id @default(autoincrement())
+  semester  Int
+  name      String
+  url       String
+  documents Document[]
+
+  @@unique([semester, name])
+}
+
+model Document {
+  id        Int     @id @default(autoincrement())
+  subjectId Int
+  title     String
+  url       String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, title])
+}
+
+model Faculty {
+  id             Int     @id @default(autoincrement())
+  name           String
+  profileUrl     String  @unique
+  imageUrl       String
+  imageBase64    String?
+  email          String?
+  phone          String?
+  designation    String?
+  specialization String?
+}
+
+model ScrapeJob {
+  id        String   @id @default(uuid())
+  query     String // The search query or JSON-stringified array for bulk
+  type      String // "SEARCH" or "BULK"
+  status    String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  result    String? // JSON stringified result
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

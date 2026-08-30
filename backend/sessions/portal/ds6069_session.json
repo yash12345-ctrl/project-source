@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "JSESSIONID",
+      "value": "58A3E3FCF34C01BF3379309897785C4B.worker1",
+      "domain": "sp.srmist.edu.in",
+      "path": "/srmiststudentportal",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}
