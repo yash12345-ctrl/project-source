@@ -58,12 +58,16 @@ router.post('/login', async (req, res) => {
       const cached = await cacheGet<object>(cacheKey);
       if (cached) {
         console.log(`[Fee Route] ⚡ Cache HIT for ${username}. Returning cached data.`);
-        res.json({ ...cached, cached: true });
+        
         // Re-register user so background cron keeps refreshing
         if (password) {
             await registerUserForBackgroundSync(username, { portalPassword: password });
+            
+            // Background sync
+            const job = await enqueueScrapeJob('fee_live', username, { password, forceSync: false });
+            return res.json({ ...cached, cached: true, backgroundJobId: job.id });
         }
-        return;
+        return res.json({ ...cached, cached: true });
       }
     }
 

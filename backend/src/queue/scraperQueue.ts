@@ -22,7 +22,7 @@ export async function enqueueScrapeJob(
   // Use purely username and jobType for deduplication.
   // If multiple API requests or cron triggers ask for the same scrape concurrently,
   // BullMQ will simply return the existing active job.
-  const jobId = `${jobType}:${username}`;
+  const jobId = `${jobType}_${username}`;
   return scraperQueue.add(jobType, { username, ...data }, {
     jobId,
     removeOnComplete: true, // Delete from queue on completion so future syncs can happen

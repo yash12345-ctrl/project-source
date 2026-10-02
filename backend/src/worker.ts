@@ -1,5 +1,6 @@
 import { Worker } from 'bullmq';
-import { redisConnectionConfig } from './db/redis';
+import { redisConnectionConfig, cacheSet } from './db/redis';
+import { ATTENDANCE_CACHE_TTL_SECONDS, INTERNAL_MARKS_CACHE_TTL_SECONDS, CACHE_TTL_SECONDS } from './scraper/data.cron';
 import { SCRAPER_QUEUE_NAME } from './queue/scraperQueue';
 
 import { scrapeAttendance } from './scraper/attendance.scraper';
@@ -45,8 +46,33 @@ const worker = new Worker(SCRAPER_QUEUE_NAME, async job => {
   concurrency: 5 // Run up to 5 headless browsers simultaneously across this worker
 });
 
-worker.on('completed', (job) => {
+worker.on('completed', async (job, result) => {
   console.log(`[Worker] ✅ Completed ${job.name} for ${job.data.username}`);
+  
+  if (result && result.success) {
+    const username = job.data.username;
+    try {
+      switch (job.name) {
+        case 'attendance_live':
+          await cacheSet(`attendance:${username}`, result, ATTENDANCE_CACHE_TTL_SECONDS);
+          break;
+        case 'grades_live':
+          await cacheSet(`grades:${username}`, result, CACHE_TTL_SECONDS);
+          break;
+        case 'fee_live':
+          await cacheSet(`fees:${username}`, result, CACHE_TTL_SECONDS);
+          break;
+        case 'calendar_live':
+          await cacheSet(`calendar:${username}`, result, CACHE_TTL_SECONDS);
+          break;
+        case 'internalmarks_live':
+          await cacheSet(`internalmarks:${username}`, result, INTERNAL_MARKS_CACHE_TTL_SECONDS);
+          break;
+      }
+    } catch (e) {
+      console.error(`[Worker] ❌ Failed to save cache for ${job.name}:`, e);
+    }
+  }
 });
 
 worker.on('failed', (job, err) => {

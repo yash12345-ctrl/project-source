@@ -59,19 +59,17 @@ router.post('/login', async (req, res) => {
       if (cached) {
         console.log(`[Attendance Route] ⚡ Cache HIT for ${username}. Returning cached data instantly.`);
 
-        // Respond immediately
-        res.json({ ...cached, cached: true });
-
         // Keep user enrolled for cron refresh
         if (password) {
             await registerUserForBackgroundSync(username, { portalPassword: password });
             
             // User requested: trigger an immediate background scrape to update the cache silently
             console.log(`[Attendance Route] 🔄 Background scrape initiated for ${username} after cache hit.`);
-            enqueueScrapeJob('attendance_live', username, { password, forceSync: false })
-              .catch(e => console.error('[Attendance Route] Background scrape error:', e));
+            const job = await enqueueScrapeJob('attendance_live', username, { password, forceSync: false });
+            return res.json({ ...cached, cached: true, backgroundJobId: job.id });
         }
-        return;
+        
+        return res.json({ ...cached, cached: true });
       }
     }
 

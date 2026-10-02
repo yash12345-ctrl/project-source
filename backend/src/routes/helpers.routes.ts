@@ -1,3 +1,5 @@
+import { scraperQueue } from '../queue/scraperQueue';
+import { Job } from 'bullmq';
 import { Router } from 'express';
 import { scrapeHelpersSem1, getSyncStatus } from '../scraper/helpers.scraper';
 import { prisma } from '../db/db';
@@ -41,6 +43,27 @@ router.post('/sync', async (req, res) => {
 
 router.get('/sync/status', (req, res) => {
   res.json({ syncing: getSyncStatus() });
+});
+
+router.get('/job/status/:jobId', async (req, res) => {
+  try {
+    const job = await Job.fromId(scraperQueue, req.params.jobId);
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    const state = await job.getState();
+    const result = job.returnvalue;
+    const failedReason = job.failedReason;
+    
+    res.json({
+      id: job.id,
+      status: state,
+      result: result || null,
+      error: failedReason || null
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export const helpersRouter = router;
