@@ -1,0 +1,261 @@
+{
+  "cookies": [
+    {
+      "name": "JSESSIONID",
+      "value": "6CDC45F5574279C26D5EFF946914B137.worker3",
+      "domain": "sp.srmist.edu.in",
+      "path": "/srmiststudentportal",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_zxor",
+      "value": "\"https://academia.srmist.edu.in\"",
+      "domain": "academia.srmist.edu.in",
+      "path": "/mics",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "zalb_74c3a1eecc",
+      "value": "4d9a403de4b8a34758771cf16393da33",
+      "domain": "academia.srmist.edu.in",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga",
+      "value": "GA1.3.1149679897.1787697394",
+      "domain": ".srmist.edu.in",
+      "path": "/",
+      "expires": 1825429500.906367,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "zalb_f0e8db9d3d",
+      "value": "64b493523048029ac1c66021ec61ec6e",
+      "domain": "academia.srmist.edu.in",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "stk",
+      "value": "66d881d7fbca8c68eb5bdf31b4b6aaff",
+      "domain": "academia.srmist.edu.in",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "zalb_3309580ed5",
+      "value": "5395b7af7665f175397e214afd2f5def",
+      "domain": "academia.srmist.edu.in",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "CT_CSRF_TOKEN",
+      "value": "0be4f037-f385-4b64-afbe-bd89029b7573",
+      "domain": "academia.srmist.edu.in",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Strict"
+    },
+    {
+      "name": "zccpn",
+      "value": "7e413ae0-b66b-4955-83ca-86096868c2d7",
+      "domain": "creator.zohopublic.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "zccpn",
+      "value": "d0132859-036a-4670-be0a-074d3e148c5c",
+      "domain": "creatorapp.zohopublic.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "iamcsr",
+      "value": "15522062a219db6d33ad773b7bf288ccc8d4497ef518d6f2c8ea5c75d5391a7dde358f6c0709de3554eb9a65382c43251d7caa316f10412b465a1e29834c7f6c",
+      "domain": "academia.srmist.edu.in",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_gid",
+      "value": "GA1.3.1406231270.1790784644",
+      "domain": ".srmist.edu.in",
+      "path": "/",
+      "expires": 1790955900,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "JSESSIONID",
+      "value": "CB53753756B07A3EC763C0B34F9016FE",
+      "domain": "academia.srmist.edu.in",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "cli_rgn",
+      "value": "IN",
+      "domain": "academia.srmist.edu.in",
+      "path": "/",
+      "expires": 1790891098.62251,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_gat",
+      "value": "1",
+      "domain": ".srmist.edu.in",
+      "path": "/",
+      "expires": 1790869560,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga_HQWPLLNMKY",
+      "value": "GS2.3.s1790869503$o5$g0$t1790869503$j60$l0$h0",
+      "domain": ".srmist.edu.in",
+      "path": "/",
+      "expires": 1825429503.381388,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "__Secure-iamsdt_client_10002227248",
+      "value": "0.CAESdBIwlvRSK8osEbCG6b78T-aKA0plcryE7EpSAJz-Hb0jSTG89L-gex_Gl1yZPWA7rksCGkDjzDZC-ZzW_aMKaJmKDiqWnygbEMS1dIDjJKNupqhGJ5uDTN-NGhF2BVscnVDJ_3LI8mPc0iYZJ3dwQzuJ9leIILCU1PfY9tjj3QE",
+      "domain": ".academia.srmist.edu.in",
+      "path": "/",
+      "expires": 1793893514.363537,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_iamadt_client_10002227248",
+      "value": "96f4522bca2c11b086e9befc4fe68a034a6572bc84ec4a52009cfe1dbd234931bcf4bfa07b1fc6975c993d603bae4b02",
+      "domain": ".academia.srmist.edu.in",
+      "path": "/",
+      "expires": 1793893514.36362,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_iambdt_client_10002227248",
+      "value": "e3cc3642f99cd6fda30a68998a0e2a969f281b10c4b57480e324a36ea6a846279b834cdf8d1a1176055b1c9d50c9ff72c8f263dcd22619277770433b89f65788",
+      "domain": ".academia.srmist.edu.in",
+      "path": "/",
+      "expires": 1793893514.363703,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_z_identity",
+      "value": "true",
+      "domain": "academia.srmist.edu.in",
+      "path": "/",
+      "expires": 1790876714.36378,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "zccpn",
+      "value": "5a88bcfe100eaeb8dd9152a266de144776babca36c33088aa3fe180818067991f9610bcd56c1b83238a7a6277f92682b4ec2052d95fcafac071ea7e30df4b047",
+      "domain": "academia.srmist.edu.in",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "wms-tkp-token_client_10002227248",
+      "value": "10086592714-39602cd5-4c519511f9820c01402ef7b76baf87f9",
+      "domain": ".academia.srmist.edu.in",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None",
+      "partitionKey": "https://srmist.edu.in",
+      "_crHasCrossSiteAncestor": false
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://academia.srmist.edu.in",
+      "localStorage": [
+        {
+          "name": "micssdkstorage",
+          "value": "{\"banner\":{\"49910842\":[],\"49910842272764300001460429910002227248\":[]}}"
+        },
+        {
+          "name": "micslastpolltime",
+          "value": "1790869521656"
+        },
+        {
+          "name": "10086592714_frequent_smileys",
+          "value": "{\"work\":[\":smile:\",\":happy:\",\":joy:\",\":love:\",\":thinking:\",\":surprise:\",\":thumbsup:\",\":thumbsdown:\",\":namaste:\",\":tensed:\",\":biceps:\",\":doubt:\",\":super:\",\":clap:\",\":fireworks:\",\":food:\",\":gift-box:\"],\"emoji\":[\":grinning:\",\":blush:\",\":wink:\",\":stuck-out-tongue-winking-eye:\",\":flushed:\",\":sob:\",\":sweat-smile:\",\":scream:\",\":sunglasses:\",\":raised-hands:\",\":wave:\",\":house-with-garden:\",\":point-up-2:\",\":dancer:\",\":bouquet:\",\":round-pushpin:\",\":heavy-plus-sign:\"],\"animated\":[\":smile!:\",\":happy!:\",\":joy!:\",\":love!:\",\":thinking!:\",\":surprise!:\",\":thumbsup!:\",\":thumbsdown!:\",\":namaste!:\",\":tensed!:\",\":biceps!:\",\":doubt!:\",\":super!:\",\":clap!:\",\":fireworks!:\",\":food!:\",\":gift-box!:\"],\"customemoji\":[],\"sticker\":[]}"
+        },
+        {
+          "name": "micsnotificationtime307",
+          "value": "1790869521671"
+        },
+        {
+          "name": "bannerloadtime",
+          "value": "{}"
+        },
+        {
+          "name": "micsTabSwitchTime",
+          "value": "1790869521671"
+        },
+        {
+          "name": "zcPortalWMSTimer",
+          "value": "{\"all\":{\"1790869521590\":1790869525081},\"registered\":{\"1790869521590\":1790869525081}}"
+        }
+      ]
+    }
+  ]
+}

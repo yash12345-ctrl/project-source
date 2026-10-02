@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 export async function scrapeCalendar(username: string, password?: string, isInteractive: boolean = false) {
+  const start = performance.now();
   const { success, error, page, browser } = await loginToPortal(username, password, isInteractive);
   if (!success || !page || !browser) {
     return { success: false, error: error || 'Login failed' };
@@ -20,6 +21,12 @@ export async function scrapeCalendar(username: string, password?: string, isInte
     ]);
     
     await page.waitForTimeout(3000); // give it some time to load
+    
+    // Check if an interstitial form like Local Residential Address is blocking access
+    const blockingFormLoc = page.locator('#txtDoorNo, #txtCityName, #hidchkHostelOpen').first();
+    if (await blockingFormLoc.isVisible().catch(() => false)) {
+        throw new Error("Action Required: Please log into the SRM Student Portal manually and update your Local Residential Address. The portal is blocking access to your data until this is completed.");
+    }
     
     const html = await page.content();
     const $ = cheerio.load(html);
@@ -55,5 +62,6 @@ export async function scrapeCalendar(username: string, password?: string, isInte
     return { success: false, error: 'Failed to extract calendar data' };
   } finally {
     if (browser) await browser.close().catch(() => {});
+    console.log(`[Performance] 🕒 Calendar scraped in ${(performance.now() - start).toFixed(2)} ms`);
   }
 }

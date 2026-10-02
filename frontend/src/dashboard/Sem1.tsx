@@ -33,7 +33,7 @@ const Sem1: React.FC<Sem1Props> = ({ onBack }) => {
   useEffect(() => {
     if (!syncing) return;
     const interval = setInterval(async () => {
-      const res = await fetch('http://localhost:5000/api/helpers/sync/status').catch(() => null);
+      const res = await fetch('/api/helpers/sync/status').catch(() => null);
       if (res?.ok) {
         const json = await res.json();
         if (!json.syncing) {
@@ -50,7 +50,7 @@ const Sem1: React.FC<Sem1Props> = ({ onBack }) => {
 
   const checkSyncStatus = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/helpers/sync/status');
+      const res = await fetch('/api/helpers/sync/status');
       if (res.ok) {
         const json = await res.json();
         setSyncing(json.syncing);
@@ -61,7 +61,7 @@ const Sem1: React.FC<Sem1Props> = ({ onBack }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/helpers/semesters/1');
+      const res = await fetch('/api/helpers/semesters/1');
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -77,7 +77,7 @@ const Sem1: React.FC<Sem1Props> = ({ onBack }) => {
     if (syncing) return;
     setSyncing(true);
     try {
-      const res = await fetch('http://localhost:5000/api/helpers/sync', {
+      const res = await fetch('/api/helpers/sync', {
         method: 'POST'
       });
       if (res.status === 409) {

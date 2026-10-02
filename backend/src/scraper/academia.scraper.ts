@@ -1,10 +1,11 @@
 import { chromium } from 'patchright';
 import type { AcademiaCredentials, AttendanceRecord, MarksRecord, ScrapeResult, CourseRecord } from '../types/academia.types';
 import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
 const ACADEMIA_URL = 'https://academia.srmist.edu.in';
-const SESSIONS_DIR = path.join(__dirname, '..', '..', 'sessions');
+const SESSIONS_DIR = path.join(__dirname, '..', '..', 'sessions', 'academia');
 
 // Ensure sessions directory exists
 if (!fs.existsSync(SESSIONS_DIR)) {
@@ -15,6 +16,7 @@ export async function scrapeAcademia(
   credentials: AcademiaCredentials,
   onLoginSuccess?: () => void
 ): Promise<ScrapeResult> {
+  const start = performance.now();
   let browser;
 
   try {
@@ -33,7 +35,11 @@ export async function scrapeAcademia(
     
     // Create context, optionally with saved session
     let context;
-    let hasSession = fs.existsSync(sessionPath);
+    let hasSession = false;
+    try {
+      await fsPromises.access(sessionPath);
+      hasSession = true;
+    } catch {}
     if (hasSession) {
       console.log('[Scraper] Found saved session, attempting fast login...');
       context = await browser.newContext({ storageState: sessionPath });
@@ -207,6 +213,8 @@ async function scrapeProfile(page: any) {
           data.department = tds[i + 1]?.textContent?.trim() || '';
         } else if (text === 'Semester:') {
           data.semester = tds[i + 1]?.textContent?.trim() || '';
+        } else if (text === 'Enrollment Status:') {
+          data.enrollmentStatus = tds[i + 1]?.textContent?.trim() || '';
         }
       }
       return data;
@@ -219,7 +227,8 @@ async function scrapeProfile(page: any) {
       mobile: profileData.mobile || '',
       program: profileData.program || '',
       department: profileData.department || '',
-      semester: profileData.semester || ''
+      semester: profileData.semester || '',
+      enrollmentStatus: profileData.enrollmentStatus || ''
     };
   } catch (error) {
     console.error('[Scraper] Error scraping profile:', error);
@@ -244,13 +253,12 @@ async function scrapeCourses(page: any): Promise<CourseRecord[]> {
     console.log('[Scraper] Navigating directly to Time Table hash URL...');
     await page.goto(`${portalUrl}#My_Time_Table_Attendance`, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
     
-    // Intelligently wait for the table to render instead of blindly waiting 5 seconds
+    // Intelligently wait for the profile/course data to render
     console.log('[Scraper] Waiting for table to render...');
-    await page.locator('table tr, .zc-record-row, .zc-viewtable').first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
-
-    // Dump HTML for debugging if needed
-    const fs = require('fs');
-    fs.writeFileSync('/home/yash/Documents/academia/backend/timetable.html', await page.content());
+    // We wait for the 'Registration Number:' cell to appear, which guarantees the view has loaded.
+    await page.locator('td', { hasText: 'Registration Number:' }).first().waitFor({ state: 'visible', timeout: 20000 }).catch(() => {
+        console.log('[Scraper] Warning: Registration Number td did not appear within timeout.');
+    });
 
     console.log('[Scraper] Extracting table rows...');
     const rows = await page.locator('table tr, table.zc-viewtable tr, .zc-record-row').all();

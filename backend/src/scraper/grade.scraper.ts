@@ -1,44 +1,8 @@
 import { Page } from 'patchright';
 import { loginToPortal } from './portalAuth';
 
-class ConcurrencyQueue {
-  private queue: (() => Promise<void>)[] = [];
-  private active = 0;
-  constructor(private limit = 3) {}
-  
-  async add<T>(fn: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.queue.push(async () => {
-        try {
-          resolve(await fn());
-        } catch (e) {
-          reject(e);
-        }
-      });
-      this.processNext();
-    });
-  }
-
-  private async processNext() {
-    if (this.active >= this.limit || this.queue.length === 0) return;
-    this.active++;
-    const next = this.queue.shift()!;
-    try {
-      await next();
-    } finally {
-      this.active--;
-      this.processNext();
-    }
-  }
-}
-
-const scrapeQueue = new ConcurrencyQueue(3);
-
 export async function scrapeGrades(username: string, password?: string, isInteractive?: boolean): Promise<{ success: boolean, error?: string, semesters?: any[], cgpa?: string }> {
-  return scrapeQueue.add(() => performScrapeGrades(username, password, isInteractive));
-}
-
-async function performScrapeGrades(username: string, password?: string, isInteractive?: boolean): Promise<{ success: boolean, error?: string, semesters?: any[], cgpa?: string }> {
+  const start = performance.now();
   const { success, error, page, browser } = await loginToPortal(username, password, isInteractive);
   if (!success || !page || !browser) {
     return { success: false, error: error || 'Login failed' };
@@ -47,6 +11,7 @@ async function performScrapeGrades(username: string, password?: string, isIntera
   try {
     const data = await extractGrades(page);
     await browser.close();
+    console.log(`[Performance] 🕒 Grades scraped in ${(performance.now() - start).toFixed(2)} ms`);
     return { success: true, semesters: data.semesters, cgpa: data.cgpa };
   } catch (error: any) {
     console.error('[Grades] Extraction Error:', error);
@@ -68,7 +33,16 @@ async function extractGrades(page: Page) {
     
     await page.waitForTimeout(2000); // Give it time to render
     // Wait for the table to appear (usually has "Grade / Mark Obtained" header)
-    await page.waitForSelector('text=Grade / Mark Obtained', { timeout: 15000 });
+    await Promise.race([
+      page.waitForSelector('text=Grade / Mark Obtained', { timeout: 15000 }),
+      page.waitForSelector('#txtDoorNo', { timeout: 15000 })
+    ]).catch(() => {});
+    
+    // Check if an interstitial form like Local Residential Address is blocking access
+    const blockingFormLoc = page.locator('#txtDoorNo, #txtCityName, #hidchkHostelOpen').first();
+    if (await blockingFormLoc.isVisible().catch(() => false)) {
+        throw new Error("Action Required: Please log into the SRM Student Portal manually and update your Local Residential Address. The portal is blocking access to your data until this is completed.");
+    }
     
     const rowsLocator = page.locator('table tr');
     const rowCount = await rowsLocator.count();

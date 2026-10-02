@@ -1,57 +1,49 @@
 import { chromium, Browser, BrowserContext, Page } from 'patchright';
 import fs from 'fs/promises';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFile } from 'child_process';
 import { captchaService } from './captcha.service';
 
+// @ts-ignore - Redlock v5 types have issues with Node10 resolution
+import Redlock from 'redlock';
+import { getRedisClient } from '../db/redis';
+
+// Initialize Redlock with our Redis client
+const redlock = new Redlock([getRedisClient() as any], {
+  driftFactor: 0.01, // time in ms
+  retryCount: -1,    // retry infinitely until we get the lock
+  retryDelay: 1000,  // retry every 1 second
+  retryJitter: 200,  // time in ms
+});
+
 const PORTAL_URL = 'https://sp.srmist.edu.in/srmiststudentportal/students/loginManager/youLogin.jsp';
+// Dedicated directory for student portal sessions (separate from main academia sessions)
 const SESSIONS_DIR = path.join(__dirname, '../../sessions/portal');
 
-class ConcurrencyQueue {
-  private queue: (() => Promise<void>)[] = [];
-  private active = 0;
-  constructor(private limit = 1) {}
-  
-  async add<T>(fn: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.queue.push(async () => {
-        try {
-          resolve(await fn());
-        } catch (e) {
-          reject(e);
-        }
-      });
-      this.processNext();
-    });
-  }
-
-  private async processNext() {
-    if (this.active >= this.limit || this.queue.length === 0) return;
-    this.active++;
-    const next = this.queue.shift()!;
-    try {
-      await next();
-    } finally {
-      this.active--;
-      this.processNext();
-    }
-  }
-}
-
-const authQueue = new ConcurrencyQueue(1);
-
 async function solveCaptcha(buffer: Buffer): Promise<string> {
+  const start = performance.now();
   try {
     const b64 = buffer.toString('base64');
     const pythonPath = path.join(__dirname, '../../venv/bin/python');
     const scriptPath = path.join(__dirname, '../../solve.py');
-    const output = execSync(`${pythonPath} ${scriptPath} ${b64}`, { maxBuffer: 10 * 1024 * 1024 }).toString();
+    
+    const output = await new Promise<string>((resolve, reject) => {
+      execFile(pythonPath, [scriptPath, b64], { timeout: 10000, maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+        if (error) {
+          console.error('[OCR] Python Script Error (stderr):', stderr);
+          return reject(error);
+        }
+        resolve(stdout);
+      });
+    });
+
     const result = JSON.parse(output.trim());
     if (result.success) {
+      console.log(`[Performance] 🕒 Captcha solved in ${(performance.now() - start).toFixed(2)} ms`);
       return result.text;
     }
   } catch (e) {
-    console.error('OCR Error:', e);
+    console.error(`[Performance] ⚠️ OCR Failed in ${(performance.now() - start).toFixed(2)} ms`, e);
   }
   return '';
 }
@@ -64,15 +56,47 @@ export interface AuthResult {
     context?: BrowserContext;
 }
 
+const invalidPasswordCache = new Map<string, { password: string, timestamp: number }>();
+
+export function clearInvalidPasswordCache(username: string) {
+  const netId = username.split('@')[0] || username;
+  invalidPasswordCache.delete(netId);
+}
+
 export async function loginToPortal(username: string, password?: string, isInteractive?: boolean): Promise<AuthResult> {
-  return authQueue.add(() => performLoginToPortal(username, password, isInteractive));
+  let lock;
+  try {
+    // Acquire a global lock to prevent multiple workers from logging in simultaneously
+    // Lock duration: 60 seconds (login usually takes 2-5 seconds, max 10 for captcha)
+    console.log(`[Auth] ⏳ ${username} waiting for global portal login lock...`);
+    lock = await redlock.acquire(['portal_login_lock'], 60000);
+    console.log(`[Auth] 🔐 ${username} acquired portal login lock!`);
+    
+    return await performLoginToPortal(username, password, isInteractive);
+  } finally {
+    if (lock) {
+      await lock.release().catch((e: any) => console.error('[Auth] Error releasing lock:', e.message));
+      console.log(`[Auth] 🔓 ${username} released portal login lock.`);
+    }
+  }
 }
 
 async function performLoginToPortal(username: string, password?: string, isInteractive?: boolean): Promise<AuthResult> {
+  const loginStart = performance.now();
   let browser;
   try {
     const netId = username.split('@')[0] || username;
-    const sessionPath = path.join(SESSIONS_DIR, `${netId}_session.json`);
+
+    // Prevent spamming the same wrong password
+    if (password) {
+      const cachedInvalid = invalidPasswordCache.get(netId);
+      if (cachedInvalid && cachedInvalid.password === password && Date.now() - cachedInvalid.timestamp < 5 * 60 * 1000) {
+         console.log(`[PortalAuth] Instant reject for ${netId} due to recently cached invalid password.`);
+         return { success: false, error: 'Invalid Password. Please check your portal credentials.' };
+      }
+    }
+
+    const sessionPath = path.join(SESSIONS_DIR, `${username.replace(/[^a-zA-Z0-9]/g, '_')}_portal_session.json`);
     
     await fs.mkdir(SESSIONS_DIR, { recursive: true });
     
@@ -91,7 +115,7 @@ async function performLoginToPortal(username: string, password?: string, isInter
     await page.waitForTimeout(2000);
     
     if (page.url().includes('HRDSystem.jsp') || page.url().includes('template') || page.url().includes('dashboard')) {
-      console.log(`[PortalAuth] Session is still valid!`);
+      console.log(`[PortalAuth] Session is still valid! (Checked in ${(performance.now() - loginStart).toFixed(2)} ms)`);
       return { success: true, page, browser, context };
     }
     
@@ -191,11 +215,26 @@ async function performLoginToPortal(username: string, password?: string, isInter
        if (!page.url().includes('youLogin.jsp') && !page.url().includes('LoginServlet') && !page.url().includes('logout')) {
          loginSuccess = true;
        } else {
-         if (interceptedError === 'Invalid Password') {
+         let domError = null;
+         const errorMsgLoc = page.locator('.alert, .cc-error, #error-message, .alert-danger, [role="alert"], .login-error, .errorMsg, font[color="red"]').first();
+         if (await errorMsgLoc.isVisible().catch(() => false)) {
+            domError = await errorMsgLoc.textContent();
+            domError = domError?.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+         }
+
+         if (domError && !domError.toLowerCase().includes('captcha')) {
             await browser.close();
+            const lowerErr = domError.toLowerCase();
+            if (lowerErr.includes('invalid') || lowerErr.includes('incorrect') || lowerErr.includes('password') || lowerErr.includes('credentials') || lowerErr.includes('locked')) {
+                if (password) invalidPasswordCache.set(netId, { password, timestamp: Date.now() });
+            }
+            return { success: false, error: domError };
+         } else if (interceptedError === 'Invalid Password') {
+            await browser.close();
+            if (password) invalidPasswordCache.set(netId, { password, timestamp: Date.now() });
             return { success: false, error: 'Invalid Password. Please check your portal credentials.' };
          }
-         console.log(`[PortalAuth] Login failed. Retrying...`);
+         console.log(`[PortalAuth] Login failed. Retrying... (domError: ${domError})`);
          
          if (retries > 0) {
              retries--;
@@ -213,16 +252,18 @@ async function performLoginToPortal(username: string, password?: string, isInter
     if (!loginSuccess) {
       console.log(`[PortalAuth] Login failed after max retries.`);
       await browser.close();
+      console.log(`[PortalAuth] Login failed for ${netId} after ${(performance.now() - loginStart).toFixed(2)} ms`);
       return { success: false, error: 'Failed to solve Captcha. Please try again.' };
     }
     
     console.log(`[PortalAuth] Login successful! Saving session...`);
     await context.storageState({ path: sessionPath });
-    
+    console.log(`[PortalAuth] Successfully logged into portal for ${netId} in ${(performance.now() - loginStart).toFixed(2)} ms`);
     return { success: true, page, browser, context };
-  } catch (error: any) {
-    console.error('[PortalAuth] Auto-Login Error:', error);
-    if (browser) await browser.close().catch(() => {});
-    return { success: false, error: error.message };
+    
+  } catch (e: any) {
+    if (browser) await browser.close();
+    console.error(`[PortalAuth] Login error for ${username} after ${(performance.now() - loginStart).toFixed(2)} ms:`, e.message);
+    return { success: false, error: e.message };
   }
 }

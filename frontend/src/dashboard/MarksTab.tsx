@@ -64,7 +64,7 @@ const MarksTab: React.FC<MarksTabProps> = ({ gradesData, setGradesData, cgpa, se
   const submitCaptcha = async () => {
     if (!captchaInput || !username) return;
     try {
-      await fetch('http://localhost:5000/api/grades/solve', {
+      await fetch('/api/grades/solve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, text: captchaInput })
@@ -90,7 +90,7 @@ const MarksTab: React.FC<MarksTabProps> = ({ gradesData, setGradesData, cgpa, se
 
       pollInterval = setInterval(async () => {
         try {
-          const pollRes = await fetch(`http://localhost:5000/api/grades/status/${encodeURIComponent(username)}`);
+          const pollRes = await fetch(`/api/grades/status/${encodeURIComponent(username)}`);
           const pollData = await pollRes.json();
           if (pollData.pending) {
             setCaptchaStatus({ pending: true, base64: pollData.base64 });
@@ -100,7 +100,7 @@ const MarksTab: React.FC<MarksTabProps> = ({ gradesData, setGradesData, cgpa, se
         } catch (e) { }
       }, 2000);
 
-      const res = await fetch('http://localhost:5000/api/grades/login', {
+      const res = await fetch('/api/grades/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password: pwdToUse })

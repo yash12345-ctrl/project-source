@@ -44,7 +44,7 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
       setLoading(true);
       setError(null);
 
-      const res = await fetch('http://localhost:5000/api/internal-marks/login', {
+      const res = await fetch('/api/internal-marks/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password: pwdToUse, manual })
@@ -77,7 +77,7 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
       setInfoMsg(null);
 
       const token = localStorage.getItem('session_token');
-      const res = await fetch('http://localhost:5000/api/sync_now/internal-marks', {
+      const res = await fetch('/api/sync_now/internal-marks', {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',

@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
+import { redisConnectionConfig } from '../db/redis';
 
 const router = Router();
 const prisma = new PrismaClient();
-const redis = new Redis(); // Connects to localhost:6379
+const redis = new Redis(redisConnectionConfig);
 
 // Route to submit a search job
 router.get('/search', async (req: Request, res: Response) => {

@@ -126,7 +126,7 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
   const submitCaptcha = async () => {
     if (!captchaInput || !username) return;
     try {
-      await fetch('http://localhost:5000/api/calendar/captcha/solve', {
+      await fetch('/api/calendar/captcha/solve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, captchaText: captchaInput })
@@ -152,7 +152,7 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
 
       pollInterval = setInterval(async () => {
         try {
-          const pollRes = await fetch(`http://localhost:5000/api/calendar/status/${encodeURIComponent(username)}`);
+          const pollRes = await fetch(`/api/calendar/status/${encodeURIComponent(username)}`);
           const pollData = await pollRes.json();
           if (pollData.pending) {
             setCaptchaStatus({ pending: true, base64: pollData.base64 });
@@ -164,7 +164,7 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
 
       const finalPwd = pwdToUse || localStorage.getItem('portal_password') || '';
 
-      const res = await fetch('http://localhost:5000/api/calendar/login', {
+      const res = await fetch('/api/calendar/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password: finalPwd })

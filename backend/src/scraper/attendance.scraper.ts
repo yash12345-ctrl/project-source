@@ -1,44 +1,7 @@
 import { Page } from 'patchright';
 import { loginToPortal } from './portalAuth';
 
-class ConcurrencyQueue {
-  private queue: (() => Promise<void>)[] = [];
-  private active = 0;
-  constructor(private limit = 3) {}
-  
-  async add<T>(fn: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.queue.push(async () => {
-        try {
-          resolve(await fn());
-        } catch (e) {
-          reject(e);
-        }
-      });
-      this.processNext();
-    });
-  }
-
-  private async processNext() {
-    if (this.active >= this.limit || this.queue.length === 0) return;
-    this.active++;
-    const next = this.queue.shift()!;
-    try {
-      await next();
-    } finally {
-      this.active--;
-      this.processNext();
-    }
-  }
-}
-
-const scrapeQueue = new ConcurrencyQueue(3);
-
 export async function scrapeAttendance(username: string, password?: string, isInteractive?: boolean): Promise<{ success: boolean, error?: string, attendance?: any[] }> {
-  return scrapeQueue.add(() => performScrapeAttendance(username, password, isInteractive));
-}
-
-async function performScrapeAttendance(username: string, password?: string, isInteractive?: boolean): Promise<{ success: boolean, error?: string, attendance?: any[] }> {
   const { success, error, page, browser } = await loginToPortal(username, password, isInteractive);
   if (!success || !page || !browser) {
     return { success: false, error: error || 'Login failed' };

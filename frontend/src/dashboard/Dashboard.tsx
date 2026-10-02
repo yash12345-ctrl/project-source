@@ -367,7 +367,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
       setInterval(async () => {
         try {
           const res = await fetch(
-            `http://localhost:5000/api/academia/cached/${encodeURIComponent(username)}`
+            `/api/academia/cached/${encodeURIComponent(username)}`
           );
 
           if (res.ok) {
@@ -463,7 +463,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
       (async () => {
         try {
           const attRes = await fetch(
-            'http://localhost:5000/api/attendance/login',
+            '/api/attendance/login',
             {
               method: 'POST',
               headers: {
@@ -517,7 +517,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
         try {
           const gradeRes =
             await fetch(
-              'http://localhost:5000/api/grades/login',
+              '/api/grades/login',
               {
                 method: 'POST',
                 headers: {
@@ -577,7 +577,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
         try {
           const feeRes =
             await fetch(
-              'http://localhost:5000/api/fees/login',
+              '/api/fees/login',
               {
                 method: 'POST',
                 headers: {
@@ -623,7 +623,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
         try {
           const calRes =
             await fetch(
-              'http://localhost:5000/api/calendar/login',
+              '/api/calendar/login',
               {
                 method: 'POST',
                 headers: {
@@ -667,7 +667,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
       (async () => {
         try {
-          const internalRes = await fetch('http://localhost:5000/api/internal-marks/login', {
+          const internalRes = await fetch('/api/internal-marks/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password: portalPwd, forceSync })
@@ -712,7 +712,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
       const response =
         await fetch(
-          'http://localhost:5000/api/academia/login',
+          '/api/academia/login',
           {
             method: 'POST',
             headers: {
@@ -760,7 +760,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
             try {
               const attRes =
                 await fetch(
-                  'http://localhost:5000/api/attendance/login',
+                  '/api/attendance/login',
                   {
                     method: 'POST',
                     headers: {
@@ -810,7 +810,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
             try {
               const gradeRes =
                 await fetch(
-                  'http://localhost:5000/api/grades/login',
+                  '/api/grades/login',
                   {
                     method: 'POST',
                     headers: {
@@ -871,7 +871,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
             try {
               const feeRes =
                 await fetch(
-                  'http://localhost:5000/api/fees/login',
+                  '/api/fees/login',
                   {
                     method: 'POST',
                     headers: {
@@ -914,7 +914,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
             try {
               const calRes =
                 await fetch(
-                  'http://localhost:5000/api/calendar/login',
+                  '/api/calendar/login',
                   {
                     method: 'POST',
                     headers: {
@@ -955,7 +955,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
           (async () => {
             try {
-              const internalRes = await fetch('http://localhost:5000/api/internal-marks/login', {
+              const internalRes = await fetch('/api/internal-marks/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password: portalPwd })
@@ -1312,7 +1312,7 @@ const Dashboard: React.FC = () => {
       return;
     }
     
-    fetch('http://localhost:5000/api/academia/me', {
+    fetch('/api/academia/me', {
       headers: { Authorization: `Bearer ${token}` }
     })
     .then(res => res.json())

@@ -7,9 +7,13 @@ import gradeRoutes from './routes/grade.routes';
 import feeRoutes from './routes/fee.routes';
 import calendarRoutes from './routes/calendar.routes';
 import staffRoutes from './routes/staff.routes';
+import internalMarksRoutes from './routes/internalMarks.routes';
+import syncNowRoutes from './sync_now/sync_now.routes';
 import { startQueueWorker } from './jobs/queue';
 import { helpersRouter } from './routes/helpers.routes';
 import { startSessionKeepAlive } from './utils/keepAlive';
+import { startDataCronJob } from './scraper/data.cron';
+import { startEventLoopMonitor } from './utils/eventLoopMonitor';
 
 dotenv.config();
 
@@ -31,17 +35,33 @@ app.use('/api/grades', gradeRoutes);
 app.use('/api/fees', feeRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/staff', staffRoutes);
+app.use('/api/internal-marks', internalMarksRoutes);
 app.use('/api/helpers', helpersRouter);
+app.use('/api/sync_now', syncNowRoutes);
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`✅ Server is running on http://localhost:${PORT}`);
-  console.log(`   Health check: http://localhost:${PORT}/api/health`);
-  console.log(`   Academia API: http://localhost:${PORT}/api/academia`);
+const role = process.env.SERVER_ROLE || 'ALL';
 
-  // Start the background Keep-Alive service for the Student Portal
-  startSessionKeepAlive();
-  
+if (role === 'API' || role === 'ALL') {
+  app.listen(PORT, () => {
+    console.log(`✅ [${role}] Server is running on http://localhost:${PORT}`);
+    console.log(`   Health check: http://localhost:${PORT}/api/health`);
+
+    // Start the background Keep-Alive service for the Student Portal
+    startSessionKeepAlive();
+    
+    // Start the 2-day background data refresh (Fees, Calendar, Grades)
+    startDataCronJob();
+
+    // Start event loop monitor
+    startEventLoopMonitor();
+  });
+}
+
+if (role === 'WORKER' || role === 'ALL') {
   // Start the background Scraper Queue Worker
   startQueueWorker();
-});
+  // Start the BullMQ worker for attendance/calendar/grades scraping
+  require('./worker');
+  console.log(`💪 [${role}] Scraper Worker Node started!`);
+}

@@ -48,3 +48,31 @@ model ScrapeJob {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model AcademiaAccount {
+  username String @id
+  password String
+}
+
+model PortalAccount {
+  username String @id
+  password String
+}
+
+model ScrapedData {
+  id        String   @id @default(uuid())
+  username  String
+  type      String   // e.g. 'attendance', 'grades', 'fees', etc.
+  data      String   // The stringified JSON data
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([username, type])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  username  String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}

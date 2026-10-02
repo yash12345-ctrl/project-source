@@ -78,7 +78,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ attendanceData, setAttend
   const submitCaptcha = async () => {
     if (!captchaInput || !username) return;
     try {
-      await fetch('http://localhost:5000/api/attendance/solve', {
+      await fetch('/api/attendance/solve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, text: captchaInput })
@@ -105,7 +105,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ attendanceData, setAttend
 
       pollInterval = setInterval(async () => {
         try {
-          const pollRes = await fetch(`http://localhost:5000/api/attendance/status/${encodeURIComponent(username)}`);
+          const pollRes = await fetch(`/api/attendance/status/${encodeURIComponent(username)}`);
           const pollData = await pollRes.json();
           if (pollData.pending) {
             setCaptchaStatus({ pending: true, base64: pollData.base64 });
@@ -116,7 +116,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ attendanceData, setAttend
       }, 2000);
 
       const token = localStorage.getItem('session_token');
-      const res = await fetch('http://localhost:5000/api/sync_now/attendance', {
+      const res = await fetch('/api/sync_now/attendance', {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',

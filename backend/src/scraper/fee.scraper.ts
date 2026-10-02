@@ -35,6 +35,7 @@ async function extractTableData(page: Page) {
 }
 
 export async function scrapeFees(username: string, password?: string, isInteractive: boolean = false) {
+  const start = performance.now();
   const { success, error, page, browser } = await loginToPortal(username, password, isInteractive);
   if (!success || !page || !browser) {
     return { success: false, error: error || 'Login failed' };
@@ -54,7 +55,16 @@ export async function scrapeFees(username: string, password?: string, isInteract
       ]);
       
       // 2. Wait for the tab buttons to appear
-      await page.waitForSelector(`text=${buttonText}`, { timeout: 15000 }).catch(() => {});
+      await Promise.race([
+        page.waitForSelector(`text=${buttonText}`, { timeout: 15000 }),
+        page.waitForSelector('#txtDoorNo', { timeout: 15000 })
+      ]).catch(() => {});
+      
+      // Check if an interstitial form like Local Residential Address is blocking access
+      const blockingFormLoc = page.locator('#txtDoorNo, #txtCityName, #hidchkHostelOpen').first();
+      if (await blockingFormLoc.isVisible().catch(() => false)) {
+          throw new Error("Action Required: Please log into the SRM Student Portal manually and update your Local Residential Address. The portal is blocking access to your data until this is completed.");
+      }
       
       // 3. Click the specific tab button
       try {
@@ -77,6 +87,7 @@ export async function scrapeFees(username: string, password?: string, isInteract
 
     console.log(`[Fees] Successfully extracted fee tables.`);
     
+    console.log(`[Performance] 🕒 Fees scraped in ${(performance.now() - start).toFixed(2)} ms`);
     return { success: true, feeDetails, paymentLog, pendingExam };
   } catch (error) {
     console.error(`[Fees] Extraction failed:`, error);

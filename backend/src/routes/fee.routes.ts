@@ -1,10 +1,14 @@
 import { Router } from 'express';
-import { scrapeFees } from '../scraper/fee.scraper';
 import { captchaService } from '../scraper/captcha.service';
-import Redis from 'ioredis';
+import { cacheGet, cacheSet, isRedisReady } from '../db/redis';
+import { registerUserForBackgroundSync, CACHE_TTL_SECONDS } from '../scraper/data.cron';
+import { enqueueScrapeJob, scraperQueueEvents } from '../queue/scraperQueue';
+import { clearInvalidPasswordCache } from '../scraper/portalAuth';
+import { prisma } from '../db/db';
 
 const router = Router();
-const redis = new Redis();
+
+// ── Captcha helpers (unchanged) ────────────────────────────────────────────
 
 router.get('/status/:username', (req, res) => {
   const { username } = req.params;
@@ -25,39 +29,68 @@ router.post('/solve', (req, res) => {
   res.json({ success });
 });
 
+// ── Main login / data endpoint ─────────────────────────────────────────────
+
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  let { username, password, forceSync, manual } = req.body;
   if (!username) {
     return res.status(400).json({ success: false, error: 'Username is required' });
   }
 
+  if (!password) {
+    const account = await prisma.portalAccount.findUnique({ where: { username } });
+    if (account) {
+      password = account.password;
+    } else {
+      return res.status(401).json({ success: false, error: 'Invalid Password. Please check your portal credentials.' });
+    }
+  }
+
+  if (manual && password) {
+    clearInvalidPasswordCache(username);
+  }
+
   const cacheKey = `fees:${username}`;
-  
+
   try {
-    // 1. Check Redis Cache
-    const cachedData = await redis.get(cacheKey);
-    if (cachedData) {
-      // Return instantly
-      res.json(JSON.parse(cachedData));
-      
-      // SWR: Scrape silently in background
-      scrapeFees(username, password, false).then(result => {
-        if (result.success) {
-           redis.set(cacheKey, JSON.stringify(result), 'EX', 604800); // 7 days
+    // 1. Serve from Redis cache if available
+    if (!forceSync && isRedisReady()) {
+      const cached = await cacheGet<object>(cacheKey);
+      if (cached) {
+        console.log(`[Fee Route] ⚡ Cache HIT for ${username}. Returning cached data.`);
+        res.json({ ...cached, cached: true });
+        // Re-register user so background cron keeps refreshing
+        if (password) {
+            registerUserForBackgroundSync(username, { portalPassword: password });
         }
-      }).catch(err => console.error('Background Fee Scrape Error:', err));
-      return;
+        return;
+      }
     }
 
-    // 2. Cache Miss: Run interactively
-    const result = await scrapeFees(username, password, true);
-    if (result.success) {
-      await redis.set(cacheKey, JSON.stringify(result), 'EX', 604800); // 7 days
+    // 2. Cache MISS — run live scrape (interactive: supports captcha UI)
+    console.log(`[Fee Route] 🐢 Cache MISS for ${username}. Queueing live scrape...`);
+    const job = await enqueueScrapeJob('fee_live', username, { password, forceSync: true });
+    
+    // Wait for the worker to finish the job
+    const result = await job.waitUntilFinished(scraperQueueEvents);
+
+    if (result && result.success && !(result as any).pending) {
+      await cacheSet(cacheKey, result, CACHE_TTL_SECONDS);
+      if (password) {
+        registerUserForBackgroundSync(username, { portalPassword: password });
+        
+        await prisma.portalAccount.upsert({
+          where: { username },
+          update: { password },
+          create: { username, password }
+        });
+      }
     }
+
     res.json(result);
-  } catch (err) {
-    console.error('Fees route error:', err);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+  } catch (err: any) {
+    console.error('[Fee Route] Error:', err);
+    res.status(500).json({ success: false, error: err.message || 'Internal server error' });
   }
 });
 

@@ -1,9 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 import { scrapeStaffFinder, scrapeStaffFinderBulk } from '../scraper/staff.scraper';
 import Redis from 'ioredis';
+import { redisConnectionConfig } from '../db/redis';
 
 const prisma = new PrismaClient();
-const redis = new Redis();
+const redis = new Redis(redisConnectionConfig);
 
 let isProcessing = false;
 
@@ -38,36 +39,29 @@ export async function processQueue() {
         // Sync with SQLite Database
         if (resultData && Array.isArray(resultData)) {
           for (const staff of resultData) {
-            if (!staff.imageBase64) {
-              try {
-                await (prisma as any).faculty.deleteMany({
-                  where: { profileUrl: staff.profileUrl }
-                });
-              } catch (e) {}
-            } else {
-              await (prisma as any).faculty.upsert({
-                where: { profileUrl: staff.profileUrl },
-                update: {
-                  name: staff.name,
-                  imageUrl: staff.imageUrl,
-                  imageBase64: staff.imageBase64,
-                  email: staff.email,
-                  phone: staff.phone,
-                  designation: staff.designation,
-                  specialization: staff.specialization
-                },
-                create: {
-                  name: staff.name,
-                  profileUrl: staff.profileUrl,
-                  imageUrl: staff.imageUrl,
-                  imageBase64: staff.imageBase64,
-                  email: staff.email,
-                  phone: staff.phone,
-                  designation: staff.designation,
-                  specialization: staff.specialization
-                }
-              });
-            }
+            // Always save the faculty, even if they don't have an image
+            await (prisma as any).faculty.upsert({
+              where: { profileUrl: staff.profileUrl },
+              update: {
+                name: staff.name,
+                imageUrl: staff.imageUrl || '',
+                imageBase64: staff.imageBase64 || '',
+                email: staff.email,
+                phone: staff.phone,
+                designation: staff.designation,
+                specialization: staff.specialization
+              },
+              create: {
+                name: staff.name,
+                profileUrl: staff.profileUrl,
+                imageUrl: staff.imageUrl || '',
+                imageBase64: staff.imageBase64 || '',
+                email: staff.email,
+                phone: staff.phone,
+                designation: staff.designation,
+                specialization: staff.specialization
+              }
+            });
           }
           if (resultData.length === 0) {
              // Profile Not Found
@@ -97,37 +91,29 @@ export async function processQueue() {
         for (const queryKey in resultData) {
           const staff = resultData[queryKey];
           if (staff && staff.profileUrl) {
-            if (!staff.imageBase64) {
-              // Delete from DB if it exists, so next time it is scraped again
-              try {
-                await (prisma as any).faculty.deleteMany({
-                  where: { profileUrl: staff.profileUrl }
-                });
-              } catch (e) {}
-            } else {
-              await (prisma as any).faculty.upsert({
-                where: { profileUrl: staff.profileUrl },
-                update: {
-                  name: staff.name,
-                  imageUrl: staff.imageUrl,
-                  imageBase64: staff.imageBase64,
-                  email: staff.email,
-                  phone: staff.phone,
-                  designation: staff.designation,
-                  specialization: staff.specialization
-                },
-                create: {
-                  name: staff.name,
-                  profileUrl: staff.profileUrl,
-                  imageUrl: staff.imageUrl,
-                  imageBase64: staff.imageBase64,
-                  email: staff.email,
-                  phone: staff.phone,
-                  designation: staff.designation,
-                  specialization: staff.specialization
-                }
-              });
-            }
+            // Always save the faculty, even if they don't have an image
+            await (prisma as any).faculty.upsert({
+              where: { profileUrl: staff.profileUrl },
+              update: {
+                name: staff.name,
+                imageUrl: staff.imageUrl || '',
+                imageBase64: staff.imageBase64 || '',
+                email: staff.email,
+                phone: staff.phone,
+                designation: staff.designation,
+                specialization: staff.specialization
+              },
+              create: {
+                name: staff.name,
+                profileUrl: staff.profileUrl,
+                imageUrl: staff.imageUrl || '',
+                imageBase64: staff.imageBase64 || '',
+                email: staff.email,
+                phone: staff.phone,
+                designation: staff.designation,
+                specialization: staff.specialization
+              }
+            });
           } else {
             // Profile Not Found
             await (prisma as any).faculty.upsert({

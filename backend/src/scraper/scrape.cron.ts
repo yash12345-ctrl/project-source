@@ -2,14 +2,16 @@ import cron, { ScheduledTask } from 'node-cron';
 import { scrapeAcademia } from './academia.scraper';
 import { scrapeAttendance } from './attendance.scraper';
 import type { AcademiaCredentials, ScrapeResult } from '../types/academia.types';
+import { enqueueScrapeJob, scraperQueueEvents } from '../queue/scraperQueue';
 
-import fs from 'fs';
+import fsSync from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 
 // Directory to store disk cache
 const SESSIONS_DIR = path.join(process.cwd(), 'sessions');
-if (!fs.existsSync(SESSIONS_DIR)) {
-  fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+if (!fsSync.existsSync(SESSIONS_DIR)) {
+  fsSync.mkdirSync(SESSIONS_DIR, { recursive: true });
 }
 
 // In-memory cache to store the last scraped results per user
@@ -24,45 +26,7 @@ interface ScrapeJob {
   reject: (reason?: any) => void;
 }
 
-class ScrapeManager {
-  private queue: ScrapeJob[] = [];
-  private isProcessing: boolean = false;
 
-  public enqueue(type: ScrapeJobType, credentials: AcademiaCredentials): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.queue.push({ type, credentials, resolve, reject });
-      console.log(`[ScrapeManager] Enqueued ${type} job for ${credentials.username}. Queue length: ${this.queue.length}`);
-      this.processNext();
-    });
-  }
-
-  private async processNext() {
-    if (this.isProcessing || this.queue.length === 0) return;
-
-    this.isProcessing = true;
-    const job = this.queue.shift()!;
-
-    console.log(`[ScrapeManager] Starting ${job.type} job for ${job.credentials.username}`);
-    
-    try {
-      if (job.type === 'academia') {
-        const result = await runAcademiaScrape(job.credentials);
-        job.resolve(result);
-      } else if (job.type === 'attendance') {
-        const result = await runAttendanceScrape(job.credentials);
-        job.resolve(result);
-      }
-    } catch (e) {
-      console.error(`[ScrapeManager] Job failed:`, e);
-      job.reject(e);
-    } finally {
-      this.isProcessing = false;
-      this.processNext(); // Process next job in queue
-    }
-  }
-}
-
-const scrapeManager = new ScrapeManager();
 
 /**
  * Runs the Academia scraper and caches the result.
@@ -71,14 +35,15 @@ async function runAcademiaScrape(credentials: AcademiaCredentials): Promise<Scra
   console.log(`[CronJob] Running scheduled Academia scrape for user: ${credentials.username}`);
   
   // Scrape academia (dashboard/timetable)
-  const result = await scrapeAcademia(credentials);
+  const job = await enqueueScrapeJob('academia_live', credentials.username, credentials);
+  const result = await job.waitUntilFinished(scraperQueueEvents) as any;
   scrapeCache.set(credentials.username, result);
 
-  if (result.success) {
+  if (result && result.success) {
     console.log(`[CronJob] Academia scrape completed successfully for: ${credentials.username}`);
     try {
       const cachePath = path.join(SESSIONS_DIR, `${credentials.username.replace(/[^a-zA-Z0-9]/g, '_')}_data.json`);
-      fs.writeFileSync(cachePath, JSON.stringify(result));
+      await fs.writeFile(cachePath, JSON.stringify(result));
     } catch (e) {
       console.error(`[CronJob] Failed to write disk cache for ${credentials.username}`);
     }
@@ -98,12 +63,13 @@ async function runAttendanceScrape(credentials: AcademiaCredentials): Promise<an
   }
 
   console.log(`[CronJob] Triggering attendance sync for user: ${credentials.username}`);
-  const attendanceResult = await scrapeAttendance(credentials.username, credentials.password);
+  const job = await enqueueScrapeJob('attendance_live', credentials.username, { password: credentials.password, forceSync: false });
+  const attendanceResult = await job.waitUntilFinished(scraperQueueEvents) as any;
   
-  if (attendanceResult.success) {
+  if (attendanceResult && attendanceResult.success) {
     console.log(`[CronJob] Attendance sync completed successfully for: ${credentials.username}`);
   } else {
-    console.error(`[CronJob] Attendance sync failed for ${credentials.username}: ${attendanceResult.error}`);
+    console.error(`[CronJob] Attendance sync failed for ${credentials.username}: ${attendanceResult?.error}`);
   }
   return attendanceResult;
 }
@@ -111,7 +77,7 @@ async function runAttendanceScrape(credentials: AcademiaCredentials): Promise<an
 /**
  * Returns the cached result for a user without triggering a new scrape.
  */
-export function getCachedResult(username: string): ScrapeResult | undefined {
+export async function getCachedResult(username: string): Promise<ScrapeResult | undefined> {
   if (scrapeCache.has(username)) {
     return scrapeCache.get(username);
   }
@@ -119,16 +85,30 @@ export function getCachedResult(username: string): ScrapeResult | undefined {
   // Try to load from disk
   try {
     const cachePath = path.join(SESSIONS_DIR, `${username.replace(/[^a-zA-Z0-9]/g, '_')}_data.json`);
-    if (fs.existsSync(cachePath)) {
-      const data = JSON.parse(fs.readFileSync(cachePath, 'utf8')) as ScrapeResult;
+    try {
+      const fileContent = await fs.readFile(cachePath, 'utf8');
+      const data = JSON.parse(fileContent) as ScrapeResult;
       scrapeCache.set(username, data);
       return data;
+    } catch (err: any) {
+      if (err.code !== 'ENOENT') console.error(`[CronJob] Failed to read disk cache for ${username}`, err);
     }
-  } catch (e) {
     console.error(`[CronJob] Failed to read disk cache for ${username}`);
+  } catch (e) {
+    console.error(`[CronJob] General error loading disk cache for ${username}`, e);
   }
   
   return undefined;
+}
+
+export async function setCachedResult(username: string, result: ScrapeResult) {
+  scrapeCache.set(username, result);
+  try {
+    const cachePath = path.join(SESSIONS_DIR, `${username.replace(/[^a-zA-Z0-9]/g, '_')}_data.json`);
+    await fs.writeFile(cachePath, JSON.stringify(result));
+  } catch (e) {
+    console.error(`[CronJob] Failed to write disk cache for ${username}`);
+  }
 }
 
 /**
@@ -136,9 +116,10 @@ export function getCachedResult(username: string): ScrapeResult | undefined {
  */
 export async function triggerManualScrape(credentials: AcademiaCredentials): Promise<ScrapeResult> {
   // Enqueue both scrapes, wait for Academia to return
-  scrapeManager.enqueue('attendance', credentials).catch(e => console.error(e));
-  
-  await scrapeManager.enqueue('academia', credentials);
+  runAttendanceScrape(credentials).catch(e => console.error(e));
+
+  // Await the academia scrape
+  await runAcademiaScrape(credentials);
   
   return scrapeCache.get(credentials.username) ?? {
     success: false,
@@ -156,8 +137,16 @@ export function scheduleScrapeCronJob(
     // Random delay between 0 and 5 minutes (300,000 ms) to avoid exact-minute detection
     const delay = Math.floor(Math.random() * 300000);
     console.log(`[CronJob] ${type} scrape triggered for ${credentials.username}. Waiting ${Math.round(delay/1000)}s for stealth...`);
-    setTimeout(() => {
-      scrapeManager.enqueue(type, credentials).catch(e => console.error(e));
+    setTimeout(async () => {
+      try {
+        if (type === 'academia') {
+          await runAcademiaScrape(credentials);
+        } else if (type === 'attendance') {
+          await runAttendanceScrape(credentials);
+        }
+      } catch (e) {
+        console.error(e);
+      }
     }, delay);
   };
 
@@ -165,18 +154,14 @@ export function scheduleScrapeCronJob(
 
   if (customSchedule) {
     tasks.push(cron.schedule(customSchedule, () => runWithJitter('academia')));
-    tasks.push(cron.schedule(customSchedule, () => runWithJitter('attendance')));
   } else {
-    // Attendance: Every hour, at the top of the hour
-    tasks.push(cron.schedule('0 * * * *', () => runWithJitter('attendance')));
-    
-    // Academia: Once a day at 2:30 AM
-    tasks.push(cron.schedule('30 2 * * *', () => runWithJitter('academia')));
+    // Academia: Once every 2 days at 2:30 AM
+    tasks.push(cron.schedule('30 2 */2 * *', () => runWithJitter('academia')));
   }
 
   // Run an immediate first scrape of both without jitter so data is available right away
-  scrapeManager.enqueue('academia', credentials).catch(e => console.error(e));
-  scrapeManager.enqueue('attendance', credentials).catch(e => console.error(e));
+  runAcademiaScrape(credentials).catch(e => console.error(e));
+  runAttendanceScrape(credentials).catch(e => console.error(e));
 
   return tasks;
 }

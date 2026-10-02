@@ -4,9 +4,16 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const SUBJECTS = [
-  'Physical And Analytical Chemistry',
-  'Basic Civil & Mechanical Workshop',
-  'Biology'
+  'Advanced Calculus And Complex Analysis',
+  'Electrical And Electronics Engineering',
+  'Semiconductor Physics And Computational Methods',
+  'Physics-Mechanics',
+  'Object Oriented Design And Programming',
+  'Communicative English',
+  'Engineering Mechanics',
+  'Electronic System And PCB Design',
+  'Building Materials In The Built Environment',
+  'Electromagnetic Physics'
 ];
 
 async function run() {
@@ -14,7 +21,7 @@ async function run() {
   
   for (const SUBJECT_NAME of SUBJECTS) {
     const encodedName = encodeURIComponent(SUBJECT_NAME);
-    const SUBJECT_URL = `https://www.thehelpers.tech/semesters/1/subjects/${encodedName}`;
+    const SUBJECT_URL = `https://www.thehelpers.tech/semesters/2/subjects/${encodedName}`;
     
     console.log(`\n\n=== Starting Scraping for ${SUBJECT_NAME} ===`);
     
@@ -44,9 +51,9 @@ async function run() {
 
     // Upsert the subject
     const subject = await prisma.subject.upsert({
-      where: { semester_name: { semester: 1, name: SUBJECT_NAME } },
+      where: { semester_name: { semester: 2, name: SUBJECT_NAME } },
       update: { url: SUBJECT_URL },
-      create: { semester: 1, name: SUBJECT_NAME, url: SUBJECT_URL }
+      create: { semester: 2, name: SUBJECT_NAME, url: SUBJECT_URL }
     });
     console.log(`Saved Subject to DB: ${subject.id}, found ${count} documents.`);
 

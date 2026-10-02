@@ -66,7 +66,7 @@ const FeeTab: React.FC<FeeTabProps> = ({ feeData, setFeeData, savedUsername }) =
   const submitCaptcha = async () => {
     if (!captchaInput || !username) return;
     try {
-      await fetch('http://localhost:5000/api/fees/solve', {
+      await fetch('/api/fees/solve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, text: captchaInput })
@@ -92,7 +92,7 @@ const FeeTab: React.FC<FeeTabProps> = ({ feeData, setFeeData, savedUsername }) =
 
       pollInterval = setInterval(async () => {
         try {
-          const pollRes = await fetch(`http://localhost:5000/api/fees/status/${encodeURIComponent(username)}`);
+          const pollRes = await fetch(`/api/fees/status/${encodeURIComponent(username)}`);
           const pollData = await pollRes.json();
           if (pollData.pending) {
             setCaptchaStatus({ pending: true, base64: pollData.base64 });
@@ -104,7 +104,7 @@ const FeeTab: React.FC<FeeTabProps> = ({ feeData, setFeeData, savedUsername }) =
 
       const finalPwd = pwdToUse || localStorage.getItem('portal_password');
 
-      const res = await fetch('http://localhost:5000/api/fees/login', {
+      const res = await fetch('/api/fees/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password: finalPwd })

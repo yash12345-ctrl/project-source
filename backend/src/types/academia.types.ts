@@ -1,6 +1,7 @@
 export interface AcademiaCredentials {
   username: string;
   password: string;
+  portalPassword?: string;
 }
 
 export interface AttendanceRecord {
@@ -35,6 +36,7 @@ export interface StudentProfile {
   program: string;
   department: string;
   semester: string;
+  enrollmentStatus: string;
 }
 
 export interface TimeTableGridCell {

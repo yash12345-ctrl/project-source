@@ -75,7 +75,7 @@ const FacultyFinderTab: React.FC<FacultyFinderTabProps> = ({ courses = [] }) => 
     setBulkStatus('SUBMITTING');
     try {
       const queries = uniqueFaculty.map((f: any) => f.cleanName);
-      const response = await fetch('http://localhost:5000/api/staff/bulk-search', {
+      const response = await fetch('/api/staff/bulk-search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ queries })
@@ -115,7 +115,7 @@ const FacultyFinderTab: React.FC<FacultyFinderTabProps> = ({ courses = [] }) => 
     setSearchStatus('SUBMITTING');
 
     try {
-      const response = await fetch(`http://localhost:5000/api/staff/search?q=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`/api/staff/search?q=${encodeURIComponent(searchQuery)}`);
       if (!response.ok) throw new Error('Failed to submit search.');
 
       const data = await response.json();
@@ -139,7 +139,7 @@ const FacultyFinderTab: React.FC<FacultyFinderTabProps> = ({ courses = [] }) => 
     if (searchJobId && (searchStatus === 'PENDING' || searchStatus === 'PROCESSING')) {
       interval = setInterval(async () => {
         try {
-          const res = await fetch(`http://localhost:5000/api/staff/job/${searchJobId}`);
+          const res = await fetch(`/api/staff/job/${searchJobId}`);
           if (res.ok) {
             const data = await res.json();
             if (data.status) setSearchStatus(data.status);
@@ -166,7 +166,7 @@ const FacultyFinderTab: React.FC<FacultyFinderTabProps> = ({ courses = [] }) => 
     if (bulkJobId && (bulkStatus === 'PENDING' || bulkStatus === 'PROCESSING')) {
       interval = setInterval(async () => {
         try {
-          const res = await fetch(`http://localhost:5000/api/staff/job/${bulkJobId}`);
+          const res = await fetch(`/api/staff/job/${bulkJobId}`);
           if (res.ok) {
             const data = await res.json();
             if (data.status) setBulkStatus(data.status);
