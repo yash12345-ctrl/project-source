@@ -195,4 +195,10 @@ router.get('/cached', requireAuth, async (req: AuthRequest, res: Response): Prom
   res.json(JSON.parse(cached.data));
 });
 
+// Session verification endpoint used by Dashboard to confirm token is still valid
+router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const username = req.user?.username;
+  res.json({ success: true, username });
+});
+
 export default router;

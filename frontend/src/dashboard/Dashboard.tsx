@@ -984,10 +984,13 @@ const Dashboard: React.FC = () => {
   const [sessionUsername, setSessionUsername] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
+  const navigateRef = useRef(navigate);
+  useEffect(() => { navigateRef.current = navigate; }, [navigate]);
+
   useEffect(() => {
     const token = localStorage.getItem('session_token');
     if (!token) {
-      navigate('/');
+      navigateRef.current('/');
       return;
     }
     
@@ -1000,12 +1003,12 @@ const Dashboard: React.FC = () => {
         setSessionUsername(data.username);
       } else {
         localStorage.removeItem('session_token');
-        navigate('/');
+        navigateRef.current('/');
       }
     })
-    .catch(() => navigate('/'))
+    .catch(() => navigateRef.current('/'))
     .finally(() => setIsInitializing(false));
-  }, [navigate]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isInitializing || !sessionUsername) {
     return <SplashScreen theme="dark" />;
