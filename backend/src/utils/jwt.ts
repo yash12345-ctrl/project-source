@@ -1,7 +1,10 @@
 import jwt from 'jsonwebtoken';
 
-const SESSION_SECRET = process.env.JWT_SECRET || 'secret';
-const SYNC_SECRET = process.env.JWT_SYNC_SECRET || 'sync_secret';
+const SESSION_SECRET = process.env.JWT_SECRET;
+const SYNC_SECRET = process.env.JWT_SYNC_SECRET;
+
+if (!SESSION_SECRET) throw new Error('JWT_SECRET is not defined in environment variables');
+if (!SYNC_SECRET) throw new Error('JWT_SYNC_SECRET is not defined in environment variables');
 
 export interface SessionJwtPayload {
   username: string;

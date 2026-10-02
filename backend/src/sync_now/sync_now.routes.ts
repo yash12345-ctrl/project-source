@@ -3,6 +3,7 @@ import { prisma } from '../db/db';
 import { enqueueScrapeJob, scraperQueueEvents } from '../queue/scraperQueue';
 import { cacheGet, cacheSet, isRedisReady } from '../db/redis';
 import { ATTENDANCE_CACHE_TTL_SECONDS, CACHE_TTL_SECONDS, registerUserForBackgroundSync } from '../scraper/data.cron';
+import { verifySessionToken } from '../utils/jwt';
 
 const router = Router();
 
@@ -13,12 +14,12 @@ router.post('/attendance', async (req, res) => {
       return res.status(401).json({ success: false, error: 'No token provided' });
     }
 
-    const session = await prisma.session.findUnique({ where: { token } });
-    if (!session || session.expiresAt < new Date()) {
-      return res.status(401).json({ success: false, error: 'Session expired' });
+    const payload = verifySessionToken(token);
+    if (!payload) {
+      return res.status(401).json({ success: false, error: 'Invalid or expired token' });
     }
 
-    const username = session.username;
+    const username = payload.username;
 
     // Check rate limit (1 hour cooldown)
     if (isRedisReady()) {
@@ -77,12 +78,12 @@ router.post('/internal-marks', async (req, res) => {
       return res.status(401).json({ success: false, error: 'No token provided' });
     }
 
-    const session = await prisma.session.findUnique({ where: { token } });
-    if (!session || session.expiresAt < new Date()) {
-      return res.status(401).json({ success: false, error: 'Session expired' });
+    const payload = verifySessionToken(token);
+    if (!payload) {
+      return res.status(401).json({ success: false, error: 'Invalid or expired token' });
     }
 
-    const username = session.username;
+    const username = payload.username;
 
     // Check rate limit (1 hour cooldown)
     if (isRedisReady()) {

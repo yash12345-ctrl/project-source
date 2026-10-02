@@ -13,9 +13,10 @@ export const startSyncWorker = () => {
     const { username } = job.data;
 
     // Set state to running
-    await prisma.syncState.update({
+    await prisma.syncState.upsert({
       where: { userId: username },
-      data: { status: 'running', startedAt: new Date(), jobId: job.id || null }
+      update: { status: 'running', startedAt: new Date(), jobId: job.id || null },
+      create: { userId: username, status: 'running', startedAt: new Date(), jobId: job.id || null }
     });
 
     const account = await prisma.academiaAccount.findUnique({ where: { username } });

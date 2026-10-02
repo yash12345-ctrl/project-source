@@ -20,7 +20,7 @@ export async function enqueueScrapeJob(
   data: any
 ) {
   // We use a combination of username and jobType for deduplication if needed
-  const jobId = `${jobType}:${username}:${Date.now()}`;
+  const jobId = `${jobType}_${username}_${Date.now()}`;
   return scraperQueue.add(jobType, { username, ...data }, {
     jobId,
     removeOnComplete: 100, // Keep last 100 completed jobs in Redis
