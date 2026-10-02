@@ -24,7 +24,7 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
   const netId = username.split('@')[0] || '';
 
   useEffect(() => {
-    if (!initialSyncStarted && netId) {
+    if (!initialSyncStarted && netId && (!internalMarksData || internalMarksData.length === 0)) {
       setInitialSyncStarted(true);
       let savedPortalPwd = localStorage.getItem('portal_password');
       if (savedPortalPwd) {
@@ -32,7 +32,7 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
         fetchInternalMarks(savedPortalPwd);
       }
     }
-  }, [initialSyncStarted, netId]);
+  }, [initialSyncStarted, netId, internalMarksData]);
 
   const fetchInternalMarks = async (pwdToUse: string, manual: boolean = false) => {
     if (!username) {
@@ -168,7 +168,9 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
 
   const subjects = Object.values(groupedData);
 
-  if (internalMarksData ) {
+  const isAuthError = error && (error.toLowerCase().includes('password') || error.toLowerCase().includes('credential'));
+
+  if (internalMarksData && !isAuthError) {
     return (
       <div className="marks-tab">
         <header className="att-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>

@@ -16,7 +16,7 @@ router.post('/attendance', async (req, res) => {
 
     const payload = verifySessionToken(token);
     if (!payload) {
-      return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+      return res.status(401).json({ success: false, error: 'Session expired' });
     }
 
     const username = payload.username;
@@ -58,7 +58,7 @@ router.post('/attendance', async (req, res) => {
 
     if (result && result.success && !(result as any).pending) {
       await cacheSet(`attendance:${username}`, result, ATTENDANCE_CACHE_TTL_SECONDS);
-      registerUserForBackgroundSync(username, { portalPassword: account.password });
+      await registerUserForBackgroundSync(username, { portalPassword: account.password });
     } else {
       // If failed, maybe remove the cooldown so they can try again?
       // For now, let's just return the result.
@@ -80,7 +80,7 @@ router.post('/internal-marks', async (req, res) => {
 
     const payload = verifySessionToken(token);
     if (!payload) {
-      return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+      return res.status(401).json({ success: false, error: 'Session expired' });
     }
 
     const username = payload.username;
@@ -121,7 +121,7 @@ router.post('/internal-marks', async (req, res) => {
 
     if (result && result.success && !(result as any).pending) {
       await cacheSet(`internalmarks:${username}`, result, CACHE_TTL_SECONDS);
-      registerUserForBackgroundSync(username, { portalPassword: account.password });
+      await registerUserForBackgroundSync(username, { portalPassword: account.password });
     }
 
     res.json(result);

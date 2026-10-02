@@ -49,16 +49,6 @@ export async function scrapeAcademia(
     }
 
     const page = await context.newPage();
-    
-    // SPEED OPTIMIZATION: Block heavy resources (Images, CSS, Fonts, Video)
-    await page.route('**/*', (route: any) => {
-      const type = route.request().resourceType();
-      if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
-        route.abort();
-      } else {
-        route.continue();
-      }
-    });
     const portalUrl = `${ACADEMIA_URL}/portal/academia-academic-services`;
     
     let needsLogin = !hasSession;

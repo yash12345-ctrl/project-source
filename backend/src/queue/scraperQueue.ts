@@ -19,11 +19,13 @@ export async function enqueueScrapeJob(
   username: string,
   data: any
 ) {
-  // We use a combination of username and jobType for deduplication if needed
-  const jobId = `${jobType}_${username}_${Date.now()}`;
+  // Use purely username and jobType for deduplication.
+  // If multiple API requests or cron triggers ask for the same scrape concurrently,
+  // BullMQ will simply return the existing active job.
+  const jobId = `${jobType}:${username}`;
   return scraperQueue.add(jobType, { username, ...data }, {
     jobId,
-    removeOnComplete: 100, // Keep last 100 completed jobs in Redis
-    removeOnFail: 500,     // Keep last 500 failed jobs
+    removeOnComplete: true, // Delete from queue on completion so future syncs can happen
+    removeOnFail: true,     // Delete on fail so we can retry later
   });
 }

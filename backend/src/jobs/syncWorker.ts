@@ -2,7 +2,8 @@ import { Queue, Worker, Job, UnrecoverableError } from 'bullmq';
 import { redisConnectionConfig } from '../db/redis';
 import { prisma } from '../db/db';
 import { scrapeAcademia } from '../scraper/academia.scraper';
-import { decryptPassword } from '../utils/crypto';
+import { enqueueScrapeJob } from '../queue/scraperQueue';
+
 
 export const syncQueue = new Queue('syncQueue', {
   connection: redisConnectionConfig
@@ -13,10 +14,9 @@ export const startSyncWorker = () => {
     const { username } = job.data;
 
     // Set state to running
-    await prisma.syncState.upsert({
+    await prisma.syncState.update({
       where: { userId: username },
-      update: { status: 'running', startedAt: new Date(), jobId: job.id || null },
-      create: { userId: username, status: 'running', startedAt: new Date(), jobId: job.id || null }
+      data: { status: 'running', startedAt: new Date(), jobId: job.id || null }
     });
 
     const account = await prisma.academiaAccount.findUnique({ where: { username } });
@@ -24,7 +24,7 @@ export const startSyncWorker = () => {
       throw new UnrecoverableError('Account not found in database');
     }
 
-    const password = decryptPassword(account.password_encrypted);
+    const password = account.password_encrypted;
 
     try {
       const result = await scrapeAcademia({ username, password });
@@ -54,6 +54,16 @@ export const startSyncWorker = () => {
           data: { status: 'success', errorCode: null, lastSyncedAt: new Date() }
         });
       });
+
+      // After successful academia scrape, trigger portal sync in background
+      const portalAccount = await prisma.portalAccount.findUnique({ where: { username } });
+      if (portalAccount) {
+        enqueueScrapeJob('attendance_live', username, { password: portalAccount.password, forceSync: true }).catch(console.error);
+        enqueueScrapeJob('grades_live', username, { password: portalAccount.password, forceSync: true }).catch(console.error);
+        enqueueScrapeJob('internalmarks_live', username, { password: portalAccount.password, forceSync: true }).catch(console.error);
+        enqueueScrapeJob('fees_live', username, { password: portalAccount.password, forceSync: true }).catch(console.error);
+        enqueueScrapeJob('calendar_live', username, { password: portalAccount.password, forceSync: true }).catch(console.error);
+      }
 
     } catch (err: any) {
       console.error(`[SyncWorker] Error for ${username}:`, err.message);

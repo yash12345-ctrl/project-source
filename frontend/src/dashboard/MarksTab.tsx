@@ -34,6 +34,14 @@ const MarksTab: React.FC<MarksTabProps> = ({ gradesData, setGradesData, cgpa, se
   const [captchaInput, setCaptchaInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  const pollIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
+
   const username = savedUsername || '';
   const netId = username.split('@')[0] || '';
 
@@ -51,15 +59,15 @@ const MarksTab: React.FC<MarksTabProps> = ({ gradesData, setGradesData, cgpa, se
   }, [gradesData]);
 
   useEffect(() => {
-    if (!initialSyncStarted && netId) {
+    if (!initialSyncStarted && netId && (!gradesData || gradesData.length === 0)) {
       setInitialSyncStarted(true);
       let savedPortalPwd = localStorage.getItem('portal_password');
       if (savedPortalPwd) {
         setPassword(savedPortalPwd);
-        fetchGrades(savedPortalPwd);
+        fetchGrades(savedPortalPwd, false);
       }
     }
-  }, [initialSyncStarted, netId]);
+  }, [initialSyncStarted, netId, gradesData]);
 
   const submitCaptcha = async () => {
     if (!captchaInput || !username) return;
@@ -76,19 +84,17 @@ const MarksTab: React.FC<MarksTabProps> = ({ gradesData, setGradesData, cgpa, se
     }
   };
 
-  const fetchGrades = async (pwdToUse: string) => {
+  const fetchGrades = async (pwdToUse: string, isManual: boolean = false) => {
     if (!username) {
       setError('Username is missing. Please log in again.');
       return;
     }
 
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
-
     try {
       setLoading(true);
       setError(null);
 
-      pollInterval = setInterval(async () => {
+      pollIntervalRef.current = setInterval(async () => {
         try {
           const pollRes = await fetch(`/api/grades/status/${encodeURIComponent(username)}`);
           const pollData = await pollRes.json();
@@ -103,11 +109,16 @@ const MarksTab: React.FC<MarksTabProps> = ({ gradesData, setGradesData, cgpa, se
       const res = await fetch('/api/grades/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password: pwdToUse })
+        body: JSON.stringify({ 
+          username, 
+          password: pwdToUse,
+          forceSync: isManual,
+          manual: isManual
+        })
       });
 
-      if (pollInterval) clearInterval(pollInterval);
-      pollInterval = null;
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
       setCaptchaStatus({ pending: false, base64: null });
 
       const data = await res.json();
@@ -128,7 +139,8 @@ const MarksTab: React.FC<MarksTabProps> = ({ gradesData, setGradesData, cgpa, se
     } catch (err) {
       setError('Network error connecting to Student Portal');
     } finally {
-      if (pollInterval) clearInterval(pollInterval);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
       setLoading(false);
     }
   };
@@ -139,7 +151,7 @@ const MarksTab: React.FC<MarksTabProps> = ({ gradesData, setGradesData, cgpa, se
       setError('Please enter your portal password.');
       return;
     }
-    await fetchGrades(password);
+    await fetchGrades(password, true);
   };
 
   // =========================
@@ -180,7 +192,9 @@ const MarksTab: React.FC<MarksTabProps> = ({ gradesData, setGradesData, cgpa, se
   // GRADES LOADED
   // =========================
 
-  if (gradesData ) {
+  const isAuthError = error && (error.toLowerCase().includes('password') || error.toLowerCase().includes('credential'));
+
+  if (gradesData && !isAuthError) {
     return (
       <div className="marks-tab">
         {captchaModal}
@@ -272,7 +286,7 @@ const MarksTab: React.FC<MarksTabProps> = ({ gradesData, setGradesData, cgpa, se
           <div className="marks-empty-state">
             <p>No grades found.</p>
             <button
-              onClick={() => fetchGrades(password)}
+              onClick={() => fetchGrades(password, true)}
               className="marks-primary-btn"
               disabled={loading}
             >

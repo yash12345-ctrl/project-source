@@ -61,7 +61,7 @@ router.post('/login', async (req, res) => {
         res.json({ ...cached, cached: true });
         // Re-register user so background cron keeps refreshing
         if (password) {
-            registerUserForBackgroundSync(username, { portalPassword: password });
+            await registerUserForBackgroundSync(username, { portalPassword: password });
         }
         return;
       }
@@ -77,7 +77,7 @@ router.post('/login', async (req, res) => {
     if (result && result.success && !(result as any).pending) {
       await cacheSet(cacheKey, result, CACHE_TTL_SECONDS);
       if (password) {
-        registerUserForBackgroundSync(username, { portalPassword: password });
+        await registerUserForBackgroundSync(username, { portalPassword: password });
         
         await prisma.portalAccount.upsert({
           where: { username },

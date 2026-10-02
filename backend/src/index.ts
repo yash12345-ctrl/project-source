@@ -43,15 +43,9 @@ app.use('/api/sync_now', syncNowRoutes);
 const role = process.env.SERVER_ROLE || 'ALL';
 
 if (role === 'API' || role === 'ALL') {
-  app.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`✅ [${role}] Server is running on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, () => {
+    console.log(`✅ [${role}] Server is running on http://localhost:${PORT}`);
     console.log(`   Health check: http://localhost:${PORT}/api/health`);
-
-    // Start the background Keep-Alive service for the Student Portal
-    startSessionKeepAlive();
-    
-    // Start the 2-day background data refresh (Fees, Calendar, Grades)
-    startDataCronJob();
 
     // Start event loop monitor
     startEventLoopMonitor();
@@ -65,5 +59,13 @@ if (role === 'WORKER' || role === 'ALL') {
   require('./worker');
   const { startSyncWorker } = require('./jobs/syncWorker');
   startSyncWorker();
+
+  // KeepAlive and DataCron run on WORKER only — NOT on API instances.
+  // Previously both api1 and api2 ran these, causing every session to be
+  // double-pinged and every cron cycle to fire twice concurrently.
+  startSessionKeepAlive();
+  startDataCronJob();
+
   console.log(`💪 [${role}] Scraper Worker Node started!`);
 }
+

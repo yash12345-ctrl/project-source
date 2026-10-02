@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
 
         // Keep user enrolled for cron refresh
         if (password) {
-            registerUserForBackgroundSync(username, { portalPassword: password });
+            await registerUserForBackgroundSync(username, { portalPassword: password });
             
             // User requested: trigger an immediate background scrape to update the cache silently
             console.log(`[Attendance Route] 🔄 Background scrape initiated for ${username} after cache hit.`);
@@ -76,6 +76,23 @@ router.post('/login', async (req, res) => {
     }
 
     // 2. Cache MISS or forceSync=true — run live interactive scrape
+    if (forceSync && isRedisReady()) {
+      const cooldownKey = `cooldown:sync_now:attendance:${username}`;
+      const lastSync = await cacheGet<number>(cooldownKey);
+      if (lastSync) {
+        const timeElapsed = Date.now() - lastSync;
+        const cooldownTime = 60 * 60 * 1000; // 1 hour
+        if (timeElapsed < cooldownTime) {
+          return res.status(429).json({ 
+            success: false, 
+            error: 'You can only manually sync once per hour',
+            remainingTimeMs: cooldownTime - timeElapsed
+          });
+        }
+      }
+      await cacheSet(cooldownKey, Date.now(), 60 * 60);
+    }
+
     console.log(`[Attendance Route] 🐢 Cache MISS or Force Sync for ${username}. Queueing live scrape...`);
     const job = await enqueueScrapeJob('attendance_live', username, { password, forceSync: true });
     
@@ -85,7 +102,7 @@ router.post('/login', async (req, res) => {
     if (result && result.success && !(result as any).pending) {
       await cacheSet(cacheKey, result, ATTENDANCE_CACHE_TTL_SECONDS);
       if (password) {
-        registerUserForBackgroundSync(username, { portalPassword: password });
+        await registerUserForBackgroundSync(username, { portalPassword: password });
         
         await prisma.portalAccount.upsert({
           where: { username },

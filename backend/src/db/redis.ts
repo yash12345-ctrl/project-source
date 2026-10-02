@@ -60,9 +60,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   }
 
   // 2. Redis miss -> check Database
-  const colonIndex = key.indexOf(':');
-  const type = colonIndex !== -1 ? key.slice(0, colonIndex) : key;
-  const username = colonIndex !== -1 ? key.slice(colonIndex + 1) : '';
+  const [type, username] = key.split(':');
   if (type && username) {
     try {
       const dbEntry = await prisma.scrapedData.findUnique({
@@ -103,9 +101,7 @@ export async function cacheSet(key: string, value: unknown, ttlSeconds: number):
   }
 
   // 2. Save to Database
-  const colonIndex = key.indexOf(':');
-  const type = colonIndex !== -1 ? key.slice(0, colonIndex) : key;
-  const username = colonIndex !== -1 ? key.slice(colonIndex + 1) : '';
+  const [type, username] = key.split(':');
   if (type && username) {
     try {
       await prisma.scrapedData.upsert({

@@ -60,6 +60,14 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ attendanceData, setAttend
   const [captchaInput, setCaptchaInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  const pollIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
+
   const username = savedUsername || '';
   const netId = username.split('@')[0] || '';
 
@@ -68,12 +76,12 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ attendanceData, setAttend
   }, []);
 
   useEffect(() => {
-    if (!initialSyncStarted && username) {
+    if (!initialSyncStarted && username && (!attendanceData || attendanceData.length === 0)) {
       setInitialSyncStarted(true);
       // Always try to auto-fetch. The backend will use the password securely from the DB.
       fetchAttendance();
     }
-  }, [initialSyncStarted, username]);
+  }, [initialSyncStarted, username, attendanceData]);
 
   const submitCaptcha = async () => {
     if (!captchaInput || !username) return;
@@ -90,20 +98,18 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ attendanceData, setAttend
     }
   };
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = async (isManual: boolean = false) => {
     if (!username) {
       setError('Username is missing. Please log in again.');
       return;
     }
-
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
 
     try {
       setLoading(true);
       setError(null);
       setInfoMsg(null);
 
-      pollInterval = setInterval(async () => {
+      pollIntervalRef.current = setInterval(async () => {
         try {
           const pollRes = await fetch(`/api/attendance/status/${encodeURIComponent(username)}`);
           const pollData = await pollRes.json();
@@ -116,16 +122,22 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ attendanceData, setAttend
       }, 2000);
 
       const token = localStorage.getItem('session_token');
-      const res = await fetch('/api/sync_now/attendance', {
+      const res = await fetch('/api/attendance/login', {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({
+          username,
+          password: password || undefined,
+          forceSync: isManual,
+          manual: isManual
+        })
       });
 
-      if (pollInterval) clearInterval(pollInterval);
-      pollInterval = null;
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
       setCaptchaStatus({ pending: false, base64: null });
 
       const data = await res.json();
@@ -148,11 +160,12 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ attendanceData, setAttend
         }
       }
     } catch (err) {
-      if (pollInterval) clearInterval(pollInterval);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       setCaptchaStatus({ pending: false, base64: null });
       setError('Network error connecting to Student Portal');
     } finally {
-      if (pollInterval) clearInterval(pollInterval);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
       setLoading(false);
     }
   };
@@ -163,7 +176,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ attendanceData, setAttend
       setError('Please enter your portal password.');
       return;
     }
-    await fetchAttendance();
+    await fetchAttendance(true);
   };
 
   const captchaModal = captchaStatus.pending && captchaStatus.base64 ? (
@@ -190,7 +203,9 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ attendanceData, setAttend
     </div>
   ) : null;
 
-  if (attendanceData ) {
+  const isAuthError = error && (error.toLowerCase().includes('password') || error.toLowerCase().includes('credential'));
+
+  if (attendanceData && !isAuthError) {
     // Derived per-subject + overall stats
     const enriched = attendanceData.map((row) => {
       const attended = parseInt(row.attended) || 0;
@@ -234,7 +249,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ attendanceData, setAttend
           {!loading && !infoMsg && (
             <button
               className="att-sync-btn"
-              onClick={() => fetchAttendance()}
+              onClick={() => fetchAttendance(true)}
               disabled={loading}
             >
               <SyncIcon spinning={loading} />

@@ -1,9 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 import { scrapeStaffFinder, scrapeStaffFinderBulk } from '../scraper/staff.scraper';
-import { getRedisClient } from '../db/redis';
+import Redis from 'ioredis';
+import { redisConnectionConfig } from '../db/redis';
 
 const prisma = new PrismaClient();
-const redis = getRedisClient();
+const redis = new Redis(redisConnectionConfig);
 
 let isProcessing = false;
 

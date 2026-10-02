@@ -53,7 +53,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
   const navigate = useNavigate();
   const { theme } = useTheme();
 
-  const [data, _setData] = useState<any>(() => {
+  const [data, setData] = useState<any>(() => {
     if (location.state?.data) {
       localStorage.setItem(
         'academia_data',
@@ -332,10 +332,10 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
     !localStorage.getItem('academia_data')
   );
 
-  const [syncError, _setSyncError] =
+  const [syncError] =
     useState<string | null>(null);
 
-  const [isPendingScrape, _setIsPendingScrape] =
+  const [isPendingScrape] =
     useState<boolean>(
       location.state?.pending === true
     );
@@ -356,21 +356,72 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
     const token = localStorage.getItem('session_token');
     if (!token) return;
 
+    // Only poll if we actually expect an active sync. Returning users with
+    // fresh data (isBackgroundSyncing=false, isPendingScrape=false) skip polling entirely.
+    if (!isBackgroundSyncing && !isPendingScrape) return;
+
+    const MAX_POLL_MS = 2 * 60 * 1000; // 2-minute hard stop
+    const startTime = Date.now();
+    let consecutiveErrors = 0;
+
     pollIntervalRef.current = setInterval(async () => {
+      // Hard timeout guard — stop polling after 2 minutes regardless
+      if (Date.now() - startTime > MAX_POLL_MS) {
+        setIsBackgroundSyncing(false);
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+        return;
+      }
+
       try {
-        const res = await fetch('/api/academia/sync-status');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            const isSyncing = data.status === 'queued' || data.status === 'running';
-            setIsBackgroundSyncing(isSyncing);
-            
-            // If it just finished syncing, we could refetch cached data, but
-            // for now, just updating the UI is enough.
+        const res = await fetch('/api/academia/sync-status', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+          consecutiveErrors++;
+          if (consecutiveErrors >= 5) {
+            // Backend unreachable — stop polling rather than looping forever
+            setIsBackgroundSyncing(false);
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+          }
+          return;
+        }
+
+        consecutiveErrors = 0; // reset on success
+        const data = await res.json();
+        if (data.success) {
+          const isSyncing = data.status === 'queued' || data.status === 'running';
+          setIsBackgroundSyncing(isSyncing);
+
+          if (data.sessionToken) {
+            localStorage.setItem('session_token', data.sessionToken);
+          }
+          if (!isSyncing) {
+            if (data.profile) {
+              setData(data);
+              localStorage.setItem('academia_data', JSON.stringify(data));
+            }
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
           }
         }
-      } catch (e) {
-        // Ignore polling error
+      } catch {
+        consecutiveErrors++;
+        if (consecutiveErrors >= 5) {
+          setIsBackgroundSyncing(false);
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+        }
       }
     }, 5000);
 
@@ -379,14 +430,30 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
         clearInterval(pollIntervalRef.current);
       }
     };
-  }, []);
+  }, [isBackgroundSyncing, isPendingScrape]);
 
   // ==========================================
   // INITIAL LOAD
   // ==========================================
 
   useEffect(() => {
-    syncPortalTabs();
+    // Fetch cached academia data from backend if not already in state
+    if (!data?.profile) {
+      const token = localStorage.getItem('session_token');
+      if (token) {
+        fetch('/api/academia/cached', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(cachedData => {
+          if (cachedData && cachedData.profile) {
+            setData(cachedData);
+            localStorage.setItem('academia_data', JSON.stringify(cachedData));
+          }
+        })
+        .catch(() => {});
+      }
+    }
   }, []);
 
   const handlePortalError = (error: string) => {
@@ -412,17 +479,9 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
   const syncPortalTabs = async (
     forceSync: boolean = false
   ) => {
-    const savedCreds =
-      JSON.stringify({ username: sessionUsername });
+    const username = sessionUsername;
+    if (!username) return;
 
-    const portalPwd = undefined;
-
-    if (!savedCreds) {
-      return;
-    }
-
-    const { username } =
-      JSON.parse(savedCreds);
 
     await Promise.allSettled([
 
@@ -440,7 +499,6 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
               },
               body: JSON.stringify({
                 username,
-                password: portalPwd,
                 forceSync
               })
             }
@@ -494,7 +552,6 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
                 },
                 body: JSON.stringify({
                   username,
-                  password: portalPwd,
                   forceSync
                 })
               }
@@ -554,7 +611,6 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
                 },
                 body: JSON.stringify({
                   username,
-                  password: portalPwd,
                   forceSync
                 })
               }
@@ -600,7 +656,6 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
                 },
                 body: JSON.stringify({
                   username,
-                  password: portalPwd,
                   forceSync
                 })
               }
@@ -638,7 +693,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
           const internalRes = await fetch('/api/internal-marks/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password: portalPwd, forceSync })
+            body: JSON.stringify({ username, forceSync })
           });
 
           const internalData = await internalRes.json();
@@ -738,12 +793,27 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
   // LOADING / EMPTY STATE
   // ==========================================
 
-  // Global empty state if NO data exists and NO sync is happening
-  const isGlobalLoading = !data && (isBackgroundSyncing || isPendingScrape);
-  const isCompletelyEmpty = !data && !attendanceData && !gradesData && !isGlobalLoading;
+  // A user has real data if it contains an actual profile, rather than just the new-user placeholder
+  const hasRealData = data && !data.isNewUser && data.profile;
+  const hasAnyData = hasRealData || attendanceData || gradesData;
 
+  // Global loading state: no data exists yet AND a sync is currently running
+  const isGlobalLoading = !hasAnyData && (isBackgroundSyncing || isPendingScrape);
+  
+  // Global empty state: no data exists and NO sync is running (e.g., sync failed)
+  const isCompletelyEmpty = !hasAnyData && !isGlobalLoading;
+
+  // NOTE: BackgroundVideo must NOT be inside conditional early-returns.
+  // Putting it in separate return branches causes React to unmount/remount the
+  // <video> DOM element on every state transition, triggering repeated v2.mp4
+  // requests. Instead we use a single return and conditionally render the content.
   if (isGlobalLoading) {
-    return <SplashScreen theme={theme} />;
+    return (
+      <div className="dashboard-container">
+        <BackgroundVideo theme={theme} />
+        <SplashScreen theme={theme} />
+      </div>
+    );
   }
 
   if (isCompletelyEmpty) {
@@ -784,6 +854,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
       </div>
     );
   }
+
 
   // ==========================================
   // OVERALL ATTENDANCE CALCULATION
@@ -984,13 +1055,10 @@ const Dashboard: React.FC = () => {
   const [sessionUsername, setSessionUsername] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  const navigateRef = useRef(navigate);
-  useEffect(() => { navigateRef.current = navigate; }, [navigate]);
-
   useEffect(() => {
     const token = localStorage.getItem('session_token');
     if (!token) {
-      navigateRef.current('/');
+      navigate('/');
       return;
     }
     
@@ -1003,12 +1071,16 @@ const Dashboard: React.FC = () => {
         setSessionUsername(data.username);
       } else {
         localStorage.removeItem('session_token');
-        navigateRef.current('/');
+        navigate('/');
       }
     })
-    .catch(() => navigateRef.current('/'))
+    .catch((err) => {
+      console.error('Failed to fetch /me:', err);
+      localStorage.removeItem('session_token');
+      navigate('/');
+    })
     .finally(() => setIsInitializing(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [navigate]);
 
   if (isInitializing || !sessionUsername) {
     return <SplashScreen theme="dark" />;

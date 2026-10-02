@@ -29,6 +29,14 @@ const FeeTab: React.FC<FeeTabProps> = ({ feeData, setFeeData, savedUsername }) =
   const [showPassword, setShowPassword] = useState(false);
   const [activeSection, setActiveSection] = useState<FeeSectionKey>('feeDetails');
 
+  const pollIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
+
   const username = savedUsername || '';
   const netId = username.split('@')[0] || '';
 
@@ -40,14 +48,14 @@ const FeeTab: React.FC<FeeTabProps> = ({ feeData, setFeeData, savedUsername }) =
   }, []);
 
   useEffect(() => {
-    if (!initialSyncStarted && netId) {
+    if (!initialSyncStarted && netId && !feeData) {
       setInitialSyncStarted(true);
       let savedPortalPwd = localStorage.getItem('portal_password');
       if (savedPortalPwd) {
-        fetchFees(savedPortalPwd);
+        fetchFees(savedPortalPwd, false);
       }
     }
-  }, [initialSyncStarted, netId]);
+  }, [initialSyncStarted, netId, feeData]);
 
   // Land on the first section that actually has data once it arrives
   useEffect(() => {
@@ -78,19 +86,17 @@ const FeeTab: React.FC<FeeTabProps> = ({ feeData, setFeeData, savedUsername }) =
     }
   };
 
-  const fetchFees = async (pwdToUse: string) => {
+  const fetchFees = async (pwdToUse: string, isManual: boolean = false) => {
     if (!username) {
       setError('Username is missing. Please log in again.');
       return;
     }
 
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
-
     try {
       setLoading(true);
       setError(null);
 
-      pollInterval = setInterval(async () => {
+      pollIntervalRef.current = setInterval(async () => {
         try {
           const pollRes = await fetch(`/api/fees/status/${encodeURIComponent(username)}`);
           const pollData = await pollRes.json();
@@ -107,11 +113,16 @@ const FeeTab: React.FC<FeeTabProps> = ({ feeData, setFeeData, savedUsername }) =
       const res = await fetch('/api/fees/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password: finalPwd })
+        body: JSON.stringify({ 
+          username, 
+          password: finalPwd,
+          forceSync: isManual,
+          manual: isManual
+        })
       });
 
-      if (pollInterval) clearInterval(pollInterval);
-      pollInterval = null;
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
       setCaptchaStatus({ pending: false, base64: null });
 
       const data = await res.json();
@@ -129,7 +140,8 @@ const FeeTab: React.FC<FeeTabProps> = ({ feeData, setFeeData, savedUsername }) =
     } catch (err) {
       setError('Network error connecting to Student Portal');
     } finally {
-      if (pollInterval) clearInterval(pollInterval);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
       setLoading(false);
     }
   };
@@ -140,7 +152,7 @@ const FeeTab: React.FC<FeeTabProps> = ({ feeData, setFeeData, savedUsername }) =
       setError('Please enter your portal password.');
       return;
     }
-    await fetchFees(password);
+    await fetchFees(password, true);
   };
 
   // =========================
@@ -233,7 +245,9 @@ const FeeTab: React.FC<FeeTabProps> = ({ feeData, setFeeData, savedUsername }) =
   // FEE DATA LOADED
   // =========================
 
-  if (feeData ) {
+  const isAuthError = error && (error.toLowerCase().includes('password') || error.toLowerCase().includes('credential'));
+
+  if (feeData && !isAuthError) {
     return (
       <div className="fee-tab">
         {captchaModal}
@@ -245,7 +259,7 @@ const FeeTab: React.FC<FeeTabProps> = ({ feeData, setFeeData, savedUsername }) =
           </div>
 
           <button
-            onClick={() => fetchFees(password)}
+            onClick={() => fetchFees(password, true)}
             className="fee-sync-btn"
             disabled={loading}
           >

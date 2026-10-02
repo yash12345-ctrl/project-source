@@ -17,7 +17,7 @@
  */
 
 import cron from 'node-cron';
-import { cacheGet, cacheSet } from '../db/redis';
+import { cacheGet, cacheSet, getRedisClient, isRedisReady } from '../db/redis';
 import { enqueueScrapeJob, scraperQueueEvents } from '../queue/scraperQueue';
 
 // ── TTLs ──────────────────────────────────────────────────────────────────
@@ -31,29 +31,59 @@ export const INTERNAL_MARKS_CACHE_TTL_SECONDS = 7200; // 2 hours
 /** Fees / Calendar / Grades: 2 days */
 export const CACHE_TTL_SECONDS = 172800; // 2 days
 
-// ── User registry ─────────────────────────────────────────────────────────
+// ── User registry (Redis-backed) ───────────────────────────────────────────
 
 /**
- * In-memory store of credentials for every user who has logged in.
- * { username => { academiaPassword, portalPassword } }  — RAM-only, cleared on server restart.
+ * Redis hash key that maps username → JSON({academiaPassword, portalPassword}).
+ * Replaces the previous in-process Map which was invisible to other API/worker
+ * instances, causing half the users to be missed by each instance's cron jobs.
  */
-const userRegistry = new Map<string, { academiaPassword?: string; portalPassword?: string }>();
+const REGISTRY_KEY = 'user:registry';
+
+/**
+ * Returns all registered users and their credentials from Redis.
+ * Falls back to an empty map if Redis is unavailable.
+ */
+async function getUserRegistry(): Promise<Map<string, { academiaPassword?: string; portalPassword?: string }>> {
+  const map = new Map<string, { academiaPassword?: string; portalPassword?: string }>();
+  if (!isRedisReady()) return map;
+  try {
+    const all = await getRedisClient().hgetall(REGISTRY_KEY);
+    if (all) {
+      for (const [username, raw] of Object.entries(all)) {
+        try { map.set(username, JSON.parse(raw)); } catch {}
+      }
+    }
+  } catch (e) {
+    console.error('[DataCron] Failed to read user registry from Redis:', e);
+  }
+  return map;
+}
 
 /**
  * Call this after any successful login or live scrape so the user
- * is included in all background refresh cycles.
+ * is included in all background refresh cycles across ALL instances.
  */
-export function registerUserForBackgroundSync(username: string, options: { academiaPassword?: string; portalPassword?: string }): void {
+export async function registerUserForBackgroundSync(username: string, options: { academiaPassword?: string; portalPassword?: string }): Promise<void> {
   if (!username) return;
-  const existing = userRegistry.get(username) || {};
-  const isNew = !userRegistry.has(username);
-  
-  if (options.academiaPassword) existing.academiaPassword = options.academiaPassword;
-  if (options.portalPassword) existing.portalPassword = options.portalPassword;
-  
-  userRegistry.set(username, existing);
-  if (isNew) {
-    console.log(`[DataCron] 📋 Registered ${username} for background sync. Total: ${userRegistry.size}`);
+  if (!isRedisReady()) {
+    console.warn('[DataCron] Redis unavailable — skipping registry update for', username);
+    return;
+  }
+  try {
+    const client = getRedisClient();
+    const raw = await client.hget(REGISTRY_KEY, username);
+    const existing = raw ? JSON.parse(raw) : {};
+    if (options.academiaPassword) existing.academiaPassword = options.academiaPassword;
+    if (options.portalPassword)   existing.portalPassword   = options.portalPassword;
+    const isNew = !raw;
+    await client.hset(REGISTRY_KEY, username, JSON.stringify(existing));
+    if (isNew) {
+      const total = await client.hlen(REGISTRY_KEY);
+      console.log(`[DataCron] 📋 Registered ${username} for background sync. Total: ${total}`);
+    }
+  } catch (e) {
+    console.error('[DataCron] Failed to register user in Redis:', e);
   }
 }
 
@@ -95,6 +125,7 @@ export async function refreshAttendance(username: string, password: string): Pro
  * Sequential to avoid hammering the portal with concurrent browser sessions.
  */
 async function runAttendanceRefreshCycle(): Promise<void> {
+  const userRegistry = await getUserRegistry();
   if (userRegistry.size === 0) return;
 
   const now = new Date();
@@ -176,6 +207,7 @@ export async function refreshInternalMarks(username: string, password: string): 
 }
 
 async function runInternalMarksRefreshCycle(): Promise<void> {
+  const userRegistry = await getUserRegistry();
   if (userRegistry.size === 0) return;
 
   const now = new Date();
@@ -275,6 +307,7 @@ export async function syncCalendar(username: string, password: string): Promise<
 }
 
 async function runFeesGradesRefreshCycle(): Promise<void> {
+  const userRegistry = await getUserRegistry();
   if (userRegistry.size === 0) return;
   console.log(`[DataCron] 🚀 Starting 7-day Fees/Grades refresh for ${userRegistry.size} user(s)...`);
   for (const [username, creds] of userRegistry.entries()) {
@@ -286,6 +319,7 @@ async function runFeesGradesRefreshCycle(): Promise<void> {
 }
 
 async function runCalendarRefreshCycle(): Promise<void> {
+  const userRegistry = await getUserRegistry();
   if (userRegistry.size === 0) return;
   console.log(`[DataCron] 🚀 Starting 1-day Calendar refresh for ${userRegistry.size} user(s)...`);
   for (const [username, creds] of userRegistry.entries()) {
