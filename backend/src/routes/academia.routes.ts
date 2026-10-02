@@ -54,7 +54,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
       // Enqueue BullMQ job with deduplication based on job ID
       await syncQueue.add('full-sync', { username }, { 
-        jobId: `sync:${username}`, 
+        jobId: `sync-${username}`, 
         attempts: 3, 
         backoff: { type: 'exponential', delay: 5000 } 
       });
