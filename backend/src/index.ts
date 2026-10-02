@@ -43,8 +43,8 @@ app.use('/api/sync_now', syncNowRoutes);
 const role = process.env.SERVER_ROLE || 'ALL';
 
 if (role === 'API' || role === 'ALL') {
-  app.listen(PORT, () => {
-    console.log(`✅ [${role}] Server is running on http://localhost:${PORT}`);
+  app.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`✅ [${role}] Server is running on http://0.0.0.0:${PORT}`);
     console.log(`   Health check: http://localhost:${PORT}/api/health`);
 
     // Start the background Keep-Alive service for the Student Portal
