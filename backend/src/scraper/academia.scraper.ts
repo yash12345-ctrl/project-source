@@ -125,14 +125,32 @@ export async function scrapeAcademia(
         if (currentUrl.includes('preannouncement') || currentUrl.includes('block-sessions') || currentUrl.includes('mfa') || currentUrl.includes('announcement')) {
            console.log(`[Scraper] Encountered interstitial page: ${currentUrl}. Trying to continue...`);
            
-           const continueBtn = page.locator('button:has-text("Terminate all"), button:has-text("Terminate All"), a:has-text("Terminate all"), button:has-text("Continue"), a:has-text("Continue"), button.continue-btn, input[value="Continue"], button:has-text("Skip"), button.btn, .signin-btn').first();
-           if (await continueBtn.count() > 0) {
-              console.log('[Scraper] Clicking continue button on interstitial...');
-              await page.waitForTimeout(1000);
-              await continueBtn.click({ force: true, timeout: 5000 }).catch(async () => {
-                  console.log('[Scraper] Force click timed out/failed, trying JS evaluation click...');
-                  await continueBtn.evaluate((el: any) => el.click()).catch(() => {});
-              });
+           const btnTexts = ["Terminate all", "Terminate All", "Continue", "Skip", "Proceed", "Close"];
+           let clicked = false;
+           for (const text of btnTexts) {
+               const btn = page.locator(`button:has-text("${text}"), a:has-text("${text}"), input[value="${text}"]`).first();
+               if (await btn.isVisible().catch(() => false)) {
+                   console.log(`[Scraper] Clicking "${text}" button on interstitial...`);
+                   await page.waitForTimeout(1000);
+                   await btn.click({ force: true, timeout: 5000 }).catch(async () => {
+                       console.log('[Scraper] Force click timed out, trying JS evaluation...');
+                       await btn.evaluate((el: any) => el.click()).catch(() => {});
+                   });
+                   clicked = true;
+                   break;
+               }
+           }
+           
+           if (!clicked) {
+               const genericBtn = page.locator('button.continue-btn, .signin-btn, button.btn-primary').first();
+               if (await genericBtn.isVisible().catch(() => false)) {
+                   console.log('[Scraper] Clicking generic primary button...');
+                   await genericBtn.click({ force: true, timeout: 5000 }).catch(() => genericBtn.evaluate((el: any) => el.click()).catch(() => {}));
+                   clicked = true;
+               }
+           }
+
+           if (clicked) {
               await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
            } else {
               console.log('[Scraper] No continue button found, hoping it auto-redirects...');
