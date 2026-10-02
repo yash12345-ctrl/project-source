@@ -51,7 +51,7 @@ model ScrapeJob {
 
 model AcademiaAccount {
   username              String   @id
-  password_encrypted    String
+  password_encrypted    String   @default("")
   credentials_valid     Boolean  @default(true)
   token_version         Int      @default(0)
   initial_sync_complete Boolean  @default(false)
