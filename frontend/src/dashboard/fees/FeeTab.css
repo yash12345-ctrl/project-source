@@ -1,0 +1,670 @@
+@keyframes fee-fade-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fee-modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* =========================================
+   TAB SHELL
+========================================= */
+
+.fee-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 900px;
+}
+
+.fee-tab-centered {
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+}
+
+/* =========================================
+   HEADER
+========================================= */
+
+.fee-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+
+    background: linear-gradient(180deg,
+            var(--ink-panel, #10141D) 0%,
+            var(--ink-bg, #0B0E14) 100%);
+
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+    border-radius: 16px;
+
+    padding: 1.75rem 2.25rem;
+
+    position: relative;
+    overflow: hidden;
+
+    flex-wrap: wrap;
+
+    animation: fee-fade-slide-in 0.4s ease both;
+}
+
+.fee-header::before {
+    content: '';
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+
+    background: linear-gradient(90deg,
+            transparent 0%,
+            var(--brass, #C9A227) 50%,
+            transparent 100%);
+
+    opacity: 0.5;
+}
+
+.fee-header-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.fee-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--brass, #C9A227);
+}
+
+.fee-title {
+    font-family: 'Newsreader', serif;
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--text-primary, #F2EFE7);
+    margin: 0;
+}
+
+.fee-sync-btn {
+    flex-shrink: 0;
+
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+    border-radius: 9px;
+
+    padding: 0.6rem 1.1rem;
+
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+
+    color: var(--text-primary, #F2EFE7);
+
+    cursor: pointer;
+
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.fee-sync-btn:hover {
+    border-color: var(--brass, #C9A227);
+    background: rgba(201, 162, 39, 0.06);
+}
+
+.fee-sync-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* =========================================
+   ERROR
+========================================= */
+
+.fee-error {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+
+    color: var(--danger, #E5675A);
+
+    background: rgba(229, 103, 90, 0.08);
+    border: 1px solid rgba(229, 103, 90, 0.2);
+    border-radius: 8px;
+
+    padding: 0.65rem 1rem;
+
+    margin: 0;
+}
+
+.fee-error-centered {
+    text-align: center;
+    margin-bottom: 1.25rem;
+}
+
+/* =========================================
+   SECTION TABS
+   Lets the user jump straight to a section
+   instead of scrolling through all three.
+========================================= */
+
+.fee-section-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+
+    animation: fee-fade-slide-in 0.4s ease both;
+}
+
+.fee-section-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    background: var(--ink-panel, #10141D);
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+    border-radius: 10px;
+
+    padding: 0.6rem 1.1rem;
+
+    cursor: pointer;
+
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.fee-section-tab:hover {
+    border-color: rgba(201, 162, 39, 0.35);
+    background: rgba(201, 162, 39, 0.05);
+}
+
+.fee-section-tab:active {
+    transform: translateY(1px);
+}
+
+.fee-section-tab.active {
+    background: rgba(201, 162, 39, 0.1);
+    border-color: var(--brass, #C9A227);
+}
+
+.fee-section-tab-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+
+    color: var(--text-muted, #757D8F);
+
+    transition: color 0.15s ease;
+}
+
+.fee-section-tab.active .fee-section-tab-label {
+    color: var(--text-primary, #F2EFE7);
+}
+
+.fee-section-tab-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+
+    color: var(--brass-soft, #E8C766);
+
+    background: rgba(201, 162, 39, 0.12);
+    border-radius: 5px;
+
+    min-width: 18px;
+    text-align: center;
+
+    padding: 2px 5px;
+}
+
+/* =========================================
+   SECTION PANEL
+========================================= */
+
+.fee-section-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    animation: fee-fade-slide-in 0.25s ease both;
+}
+
+.fee-section-title {
+    margin: 0;
+
+    font-family: 'Newsreader', serif;
+    font-size: 17px;
+    font-weight: 600;
+
+    color: var(--text-primary, #F2EFE7);
+}
+
+.fee-empty-section {
+    background: var(--ink-panel, #10141D);
+    border: 1px dashed var(--hairline, rgba(255, 255, 255, 0.12));
+    border-radius: 14px;
+
+    padding: 2.5rem 1.5rem;
+
+    text-align: center;
+
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+
+    color: var(--text-muted, #757D8F);
+}
+
+/* =========================================
+   RECEIPT CARD
+   Styled like a printed receipt: perforated
+   top/bottom edge, dashed row separators,
+   monospaced right-aligned amount column.
+========================================= */
+
+.fee-receipt {
+    position: relative;
+
+    background: var(--ink-panel, #10141D);
+
+    border-left: 1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+    border-right: 1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Perforated / scalloped edge, top and bottom */
+
+.fee-receipt-notch {
+    height: 10px;
+
+    background-image: radial-gradient(circle at 10px 0,
+            transparent 9px,
+            var(--ink-panel, #10141D) 9.5px);
+
+    background-size: 20px 20px;
+    background-repeat: repeat-x;
+}
+
+.fee-receipt-notch-top {
+    background-position: -2px -10px;
+    border-radius: 16px 16px 0 0;
+}
+
+.fee-receipt-notch-bottom {
+    transform: rotate(180deg);
+    border-radius: 16px 16px 0 0;
+}
+
+/* =========================================
+   FEE CARDS
+========================================= */
+
+.fee-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 0.5rem 1.75rem 1.25rem 1.75rem;
+}
+
+.fee-receipt-card {
+    background: rgba(15, 20, 30, 0.6);
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.12));
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='light'] .fee-receipt-card {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.fee-card-content {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    gap: 0.85rem;
+}
+
+.fee-data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px dashed var(--hairline, rgba(255, 255, 255, 0.12));
+    gap: 1rem;
+}
+
+.fee-data-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.fee-data-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary, #9CA3AF);
+    flex: 1;
+    min-width: 140px;
+}
+
+.fee-data-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--brass-soft, #E8C766);
+    text-align: right;
+    flex: 1.5;
+    word-break: break-word;
+}
+
+/* =========================================
+   LOGIN CARD
+========================================= */
+
+.fee-login-card {
+    width: 100%;
+    max-width: 420px;
+
+    background: linear-gradient(180deg,
+            var(--ink-panel, #10141D) 0%,
+            var(--ink-bg, #0B0E14) 100%);
+
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+    border-radius: 16px;
+
+    padding: 2.5rem 2.25rem;
+
+    position: relative;
+    overflow: hidden;
+
+    animation: fee-fade-slide-in 0.4s ease both;
+}
+
+.fee-login-card::before {
+    content: '';
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+
+    background: linear-gradient(90deg,
+            transparent 0%,
+            var(--brass, #C9A227) 50%,
+            transparent 100%);
+
+    opacity: 0.5;
+}
+
+.fee-login-eyebrow {
+    display: block;
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.fee-login-title {
+    margin: 0 0 0.75rem 0;
+
+    text-align: center;
+
+    font-family: 'Newsreader', serif;
+    font-size: 24px;
+    font-weight: 600;
+
+    color: var(--text-primary, #F2EFE7);
+}
+
+.fee-login-copy {
+    text-align: center;
+
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    line-height: 1.6;
+
+    color: var(--text-muted, #757D8F);
+
+    margin: 0 0 1.75rem 0;
+}
+
+.fee-loading-wrap {
+    text-align: center;
+    padding: 2rem 0;
+}
+
+/* =========================================
+   FORM ELEMENTS
+========================================= */
+
+.fee-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+
+    margin-bottom: 1.1rem;
+}
+
+.fee-input-group label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+
+    color: var(--text-muted, #757D8F);
+}
+
+.fee-login-input {
+    width: 100%;
+    box-sizing: border-box;
+
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.09));
+    border-radius: 9px;
+
+    padding: 0.75rem 0.9rem;
+
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+
+    color: var(--text-primary, #F2EFE7);
+
+    outline: none;
+
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.fee-login-input::placeholder {
+    color: var(--text-muted, #757D8F);
+    opacity: 0.6;
+}
+
+.fee-login-input:focus {
+    border-color: var(--brass, #C9A227);
+    background: rgba(201, 162, 39, 0.04);
+}
+
+.fee-login-input-disabled {
+    color: var(--text-muted, #757D8F);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.fee-primary-btn {
+    width: 100%;
+
+    background: linear-gradient(180deg, var(--brass-soft, #E8C766) 0%, var(--brass, #C9A227) 100%);
+    color: #14110A;
+
+    border: none;
+    border-radius: 9px;
+
+    padding: 0.8rem 1.5rem;
+
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+
+    cursor: pointer;
+
+    transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.fee-primary-btn:hover {
+    filter: brightness(1.08);
+}
+
+.fee-primary-btn:active {
+    transform: translateY(1px);
+}
+
+.fee-primary-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.fee-login-submit {
+    margin-top: 0.5rem;
+}
+
+/* =========================================
+   CAPTCHA MODAL
+========================================= */
+
+.fee-modal-overlay {
+    position: fixed;
+    inset: 0;
+
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(3px);
+
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 1.5rem;
+}
+
+.fee-modal {
+    width: 100%;
+    max-width: 400px;
+
+    background: linear-gradient(180deg,
+            var(--ink-panel, #10141D) 0%,
+            var(--ink-bg, #0B0E14) 100%);
+
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.09));
+    border-radius: 16px;
+
+    padding: 2rem;
+
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+
+    animation: fee-modal-in 0.25s ease both;
+}
+
+.fee-modal-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+
+    color: var(--brass, #C9A227);
+}
+
+.fee-modal-title {
+    margin: 0.4rem 0 0.75rem 0;
+
+    font-family: 'Newsreader', serif;
+    font-size: 21px;
+    font-weight: 600;
+
+    color: var(--text-primary, #F2EFE7);
+}
+
+.fee-modal-copy {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+
+    color: var(--text-muted, #757D8F);
+
+    margin: 0 0 1.25rem 0;
+}
+
+.fee-captcha-image {
+    text-align: center;
+
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+    border-radius: 10px;
+
+    padding: 1rem;
+
+    margin-bottom: 1.1rem;
+}
+
+.fee-captcha-image img {
+    max-width: 100%;
+    border-radius: 4px;
+}
+
+.fee-modal .fee-login-input {
+    margin-bottom: 1rem;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 640px) {
+
+    .fee-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1.5rem;
+    }
+
+    .fee-sync-btn {
+        align-self: stretch;
+        text-align: center;
+    }
+
+    .fee-cards-container {
+        padding: 0.5rem 1.1rem 1rem 1.1rem;
+    }
+
+    .fee-login-card {
+        padding: 2rem 1.5rem;
+    }
+}

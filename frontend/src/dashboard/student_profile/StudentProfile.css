@@ -1,0 +1,927 @@
+@keyframes fade-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes gauge-glow-pulse {
+
+    0%,
+    100% {
+        opacity: 0.55;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* =========================================
+   MAIN PROFILE
+========================================= */
+
+.student-profile {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    max-width: 780px;
+    width: 100%;
+}
+
+/* =========================================
+   HERO
+========================================= */
+
+.profile-hero {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+
+    background: linear-gradient(180deg,
+            var(--ink-panel, #10141D) 0%,
+            var(--ink-bg, #0B0E14) 100%);
+
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+
+    border-radius: 16px;
+    padding: 2.25rem;
+
+    position: relative;
+    overflow: hidden;
+
+    flex-wrap: wrap;
+
+    animation: fade-slide-in 0.4s ease both;
+}
+
+.profile-hero::before {
+    content: '';
+
+    position: absolute;
+
+    top: 0;
+    left: 0;
+    right: 0;
+
+    height: 2px;
+
+    background: linear-gradient(90deg,
+            transparent 0%,
+            var(--brass, #C9A227) 50%,
+            transparent 100%);
+
+    opacity: 0.5;
+}
+
+/* =========================================
+   AVATAR
+========================================= */
+
+.profile-avatar-ring {
+    flex-shrink: 0;
+
+    width: 96px;
+    height: 96px;
+
+    border-radius: 50%;
+
+    padding: 3px;
+
+    background: conic-gradient(from 180deg,
+            var(--brass, #C9A227),
+            var(--brass-soft, #E8C766),
+            var(--brass, #C9A227));
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-avatar {
+    width: 100%;
+    height: 100%;
+
+    border-radius: 50%;
+
+    background:
+        var(--ink-bg, #0B0E14);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-family: 'Newsreader', serif;
+
+    font-size: 34px;
+    font-weight: 600;
+
+    color:
+        var(--brass-soft, #E8C766);
+}
+
+/* =========================================
+   STUDENT DETAILS
+========================================= */
+
+.profile-heading {
+    display: flex;
+    flex-direction: column;
+
+    gap: 0.3rem;
+
+    flex: 1;
+
+    min-width: 180px;
+}
+
+.profile-eyebrow {
+    font-family:
+        'IBM Plex Mono',
+        monospace;
+
+    font-size: 10.5px;
+    font-weight: 500;
+
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+
+    color:
+        var(--brass, #C9A227);
+}
+
+.profile-name {
+    font-family:
+        'Newsreader',
+        serif;
+
+    font-size: 28px;
+    font-weight: 600;
+
+    color:
+        var(--text-primary, #F2EFE7);
+
+    margin: 0;
+}
+
+/* =========================================
+   REGISTRATION NUMBER
+========================================= */
+
+.profile-regno {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    width: fit-content;
+
+    background: transparent;
+
+    border: none;
+
+    padding: 0;
+
+    font-family:
+        'IBM Plex Mono',
+        monospace;
+
+    font-size: 13px;
+
+    letter-spacing: 1px;
+
+    color:
+        var(--text-muted, #757D8F);
+
+    cursor: pointer;
+
+    position: relative;
+
+    transition:
+        color 0.15s ease;
+}
+
+.profile-regno:hover {
+    color:
+        var(--brass-soft, #E8C766);
+}
+
+.profile-regno svg {
+    opacity: 0.6;
+
+    transition:
+        opacity 0.15s ease;
+}
+
+.profile-regno:hover svg {
+    opacity: 1;
+}
+
+.copy-toast {
+    position: absolute;
+
+    left: calc(100% + 10px);
+    top: 50%;
+
+    transform:
+        translateY(-50%) scale(0.9);
+
+    background:
+        var(--brass, #C9A227);
+
+    color: #14110A;
+
+    font-family:
+        'Inter',
+        sans-serif;
+
+    font-size: 11px;
+    font-weight: 600;
+
+    padding: 3px 8px;
+
+    border-radius: 5px;
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    transition:
+        all 0.15s ease;
+
+    white-space: nowrap;
+
+    z-index: 10;
+}
+
+.copy-toast.show {
+    opacity: 1;
+
+    transform:
+        translateY(-50%) scale(1);
+}
+
+/* =========================================
+   STATUS
+========================================= */
+
+.status-pill {
+    margin-top: 0.5rem;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    width: fit-content;
+
+    background:
+        rgba(45, 212, 191, 0.1);
+
+    border:
+        1px solid rgba(45, 212, 191, 0.25);
+
+    color:
+        var(--teal, #2DD4BF);
+
+    font-family:
+        'Inter',
+        sans-serif;
+
+    font-size: 12.5px;
+    font-weight: 600;
+
+    padding:
+        5px 12px 5px 10px;
+
+    border-radius: 20px;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+
+    border-radius: 50%;
+
+    background:
+        var(--teal, #2DD4BF);
+
+    box-shadow:
+        0 0 6px rgba(45, 212, 191, 0.8);
+}
+
+/* =========================================
+   STATS AREA
+========================================= */
+
+.profile-stats {
+    display: flex;
+
+    align-items: center;
+
+    gap: 2rem;
+
+    margin-left: auto;
+
+    padding-left: 1.75rem;
+
+    border-left:
+        1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+
+    flex-shrink: 0;
+}
+
+/* =========================================
+   ATTENDANCE GAUGE — PREMIUM
+========================================= */
+
+.stat-gauge {
+    position: relative;
+
+    width: 108px;
+    height: 108px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    background: radial-gradient(circle at 50% 50%,
+            rgba(255, 255, 255, 0.035) 0%,
+            rgba(255, 255, 255, 0) 70%);
+}
+
+/* Soft ambient glow behind the ring, tinted per tone */
+
+.stat-gauge::before {
+    content: '';
+
+    position: absolute;
+
+    inset: -6px;
+
+    border-radius: 50%;
+
+    background: radial-gradient(circle,
+            var(--gauge-glow-color, rgba(45, 212, 191, 0.35)) 0%,
+            transparent 70%);
+
+    filter: blur(6px);
+
+    animation: gauge-glow-pulse 3.2s ease-in-out infinite;
+
+    z-index: 0;
+}
+
+.tone-good {
+    --gauge-glow-color: rgba(45, 212, 191, 0.35);
+}
+
+.tone-warn {
+    --gauge-glow-color: rgba(232, 199, 102, 0.32);
+}
+
+.tone-low {
+    --gauge-glow-color: rgba(229, 103, 90, 0.32);
+}
+
+/* =========================================
+   SVG CIRCLE
+========================================= */
+
+.stat-gauge svg {
+    position: relative;
+
+    z-index: 1;
+
+    width: 92px;
+    height: 92px;
+
+    transform: rotate(-90deg);
+}
+
+/* =========================================
+   GAUGE TRACK
+========================================= */
+
+.gauge-track {
+    fill: none;
+
+    stroke:
+        rgba(255, 255, 255, 0.08);
+
+    stroke-width: 5.5;
+}
+
+/* =========================================
+   GAUGE PROGRESS
+========================================= */
+
+.gauge-fill {
+    fill: none;
+
+    stroke-width: 5.5;
+
+    stroke-linecap: round;
+
+    transition:
+        stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+
+    filter: drop-shadow(0 0 3px currentColor);
+}
+
+.tone-good .gauge-fill {
+    stroke:
+        var(--teal, #2DD4BF);
+
+    color:
+        var(--teal, #2DD4BF);
+}
+
+.tone-warn .gauge-fill {
+    stroke:
+        var(--brass-soft, #E8C766);
+
+    color:
+        var(--brass-soft, #E8C766);
+}
+
+.tone-low .gauge-fill {
+    stroke:
+        var(--danger, #E5675A);
+
+    color:
+        var(--danger, #E5675A);
+}
+
+/* =========================================
+   CENTER CONTENT OF GAUGE
+========================================= */
+
+.gauge-label {
+    position: absolute;
+
+    top: 50%;
+    left: 50%;
+
+    transform:
+        translate(-50%, -50%);
+
+    z-index: 2;
+
+    width: 92px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 2px;
+
+    text-align: center;
+}
+
+/* =========================================
+   PERCENTAGE
+========================================= */
+
+.gauge-value {
+    font-family:
+        'Inter',
+        sans-serif;
+
+    font-size: 19px;
+    font-weight: 700;
+
+    line-height: 1;
+
+    letter-spacing: -0.2px;
+
+    color:
+        var(--text-primary, #F2EFE7);
+
+    white-space: nowrap;
+}
+
+.gauge-percent-sign {
+    font-size: 12px;
+    font-weight: 600;
+
+    opacity: 0.6;
+
+    margin-left: 1px;
+}
+
+/* =========================================
+   ATTENDANCE LABEL
+========================================= */
+
+.gauge-caption {
+    font-family:
+        'IBM Plex Mono',
+        monospace;
+
+    font-size: 8.5px;
+
+    line-height: 1;
+
+    letter-spacing: 0.6px;
+
+    text-transform: uppercase;
+
+    color:
+        var(--text-muted, #757D8F);
+
+    white-space: nowrap;
+}
+
+/* =========================================
+   CGPA
+========================================= */
+
+.stat-chip {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 4px;
+
+    min-width: 58px;
+}
+
+.stat-chip-value {
+    font-family:
+        'Newsreader',
+        serif;
+
+    font-size: 24px;
+    font-weight: 600;
+
+    line-height: 1;
+
+    color:
+        var(--brass-soft, #E8C766);
+}
+
+.stat-chip-caption {
+    font-family:
+        'IBM Plex Mono',
+        monospace;
+
+    font-size: 9.5px;
+
+    letter-spacing: 1px;
+
+    text-transform: uppercase;
+
+    color:
+        var(--text-muted, #757D8F);
+}
+
+/* =========================================
+   LEDGER
+========================================= */
+
+.profile-ledger {
+    background:
+        var(--ink-panel, #10141D);
+
+    border:
+        1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+
+    border-radius: 16px;
+
+    padding:
+        0.25rem 2rem;
+}
+
+.ledger-row {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 1.5rem;
+
+    padding:
+        1.15rem 0;
+
+    border-bottom:
+        1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+
+    animation:
+        fade-slide-in 0.4s ease both;
+}
+
+.ledger-row:last-child {
+    border-bottom: none;
+}
+
+.ledger-label {
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    font-family:
+        'IBM Plex Mono',
+        monospace;
+
+    font-size: 11px;
+    font-weight: 500;
+
+    letter-spacing: 1.2px;
+
+    text-transform: uppercase;
+
+    color:
+        var(--text-muted, #757D8F);
+
+    flex-shrink: 0;
+}
+
+.ledger-icon {
+    display: flex;
+
+    width: 15px;
+    height: 15px;
+
+    color:
+        var(--brass, #C9A227);
+
+    opacity: 0.75;
+}
+
+.ledger-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.ledger-value {
+    font-family:
+        'Inter',
+        sans-serif;
+
+    font-size: 14.5px;
+    font-weight: 500;
+
+    color:
+        var(--text-primary, #F2EFE7);
+
+    text-align: right;
+}
+
+/* =========================================
+   TABLET
+========================================= */
+
+@media (max-width: 820px) {
+
+    .profile-hero {
+        gap: 1.5rem;
+        padding: 1.75rem;
+    }
+
+    .profile-stats {
+        gap: 1.25rem;
+        padding-left: 1.25rem;
+    }
+}
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 640px) {
+
+    .student-profile {
+        gap: 1rem;
+    }
+
+    .profile-hero {
+        flex-direction: column;
+
+        text-align: center;
+
+        align-items: center;
+
+        padding: 1.75rem 1.25rem;
+    }
+
+    .profile-heading {
+        align-items: center;
+    }
+
+    .profile-regno {
+        justify-content: center;
+    }
+
+    .copy-toast {
+        left: 50%;
+        top: -28px;
+
+        transform:
+            translateX(-50%) scale(0.9);
+    }
+
+    .copy-toast.show {
+        transform:
+            translateX(-50%) scale(1);
+    }
+
+    .status-pill {
+        align-self: center;
+    }
+
+    /* Stats move below student information */
+
+    .profile-stats {
+        margin-left: 0;
+
+        padding-left: 0;
+
+        padding-top: 1.25rem;
+
+        border-left: none;
+
+        border-top:
+            1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+
+        width: 100%;
+
+        justify-content: center;
+
+        gap: 2rem;
+    }
+
+    .profile-ledger {
+        padding:
+            0.25rem 1.25rem;
+    }
+
+    .ledger-row {
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 0.3rem;
+    }
+
+    .ledger-value {
+        text-align: left;
+
+        padding-left: 24px;
+    }
+}
+
+/* ===== LIGHT MODE SPECIFIC OVERRIDES ===== */
+
+[data-theme='light'] .profile-hero {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme='light'] .profile-hero::before {
+    background: linear-gradient(90deg, transparent 0%, rgba(202, 138, 4, 0.2) 50%, transparent 100%);
+}
+
+[data-theme='light'] .profile-avatar-ring {
+    background: conic-gradient(from 180deg, #ca8a04, #fde047, #ca8a04);
+}
+
+[data-theme='light'] .profile-avatar {
+    background: #f8fafc;
+    color: #b45309;
+}
+
+[data-theme='light'] .profile-eyebrow {
+    color: #b45309;
+}
+
+[data-theme='light'] .profile-name {
+    color: #0f172a;
+}
+
+[data-theme='light'] .profile-regno {
+    color: #64748b;
+}
+
+[data-theme='light'] .profile-regno svg {
+    color: #94a3b8;
+}
+
+[data-theme='light'] .profile-regno:hover {
+    color: #0f172a;
+}
+
+[data-theme='light'] .profile-regno:hover svg {
+    color: #0f172a;
+}
+
+[data-theme='light'] .copy-toast {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #0f172a;
+}
+
+[data-theme='light'] .status-pill {
+    background: #f0fdf4;
+    border-color: rgba(22, 163, 74, 0.2);
+    color: #16a34a;
+}
+
+[data-theme='light'] .status-dot {
+    background: #16a34a;
+    box-shadow: 0 0 6px rgba(22, 163, 74, 0.4);
+}
+
+[data-theme='light'] .profile-stats {
+    border-left-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='light'] .stat-gauge {
+    background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.03) 0%, transparent 70%);
+}
+
+[data-theme='light'] .gauge-track {
+    stroke: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='light'] .tone-good {
+    --gauge-glow-color: rgba(13, 148, 136, 0.25);
+}
+
+[data-theme='light'] .tone-warn {
+    --gauge-glow-color: rgba(217, 119, 6, 0.25);
+}
+
+[data-theme='light'] .tone-low {
+    --gauge-glow-color: rgba(220, 38, 38, 0.25);
+}
+
+[data-theme='light'] .gauge-value {
+    color: #0f172a;
+}
+
+[data-theme='light'] .gauge-percent-sign {
+    color: #64748b;
+}
+
+[data-theme='light'] .gauge-caption {
+    color: #64748b;
+}
+
+[data-theme='light'] .stat-chip-value {
+    color: #b45309;
+}
+
+[data-theme='light'] .stat-chip-caption {
+    color: #64748b;
+}
+
+[data-theme='light'] .profile-ledger {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+}
+
+[data-theme='light'] .ledger-row {
+    border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme='light'] .ledger-label {
+    color: #64748b;
+}
+
+[data-theme='light'] .ledger-icon {
+    color: #b45309;
+}
+
+[data-theme='light'] .ledger-value {
+    color: #0f172a;
+}
+
+@media (max-width: 640px) {
+    [data-theme='light'] .profile-stats {
+        border-top-color: rgba(0, 0, 0, 0.08);
+    }
+}

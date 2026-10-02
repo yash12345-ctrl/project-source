@@ -1,14 +1,97 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 import { LoadingScreen } from '../components/LoadingScreen';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import './Dashboard.css';
+import './CalenderTab.css';
 
 interface CalendarTabProps {
   calendarData: any | null;
   setCalendarData: (data: any) => void;
-  savedUsername: string;
+  savedUsername?: string;
 }
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_NAMES = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+];
+
+// =========================
+// FLEXIBLE DATE PARSER
+// Handles: YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, DD-MMM-YYYY, "1 Aug 2026"
+// =========================
+
+const parseCalendarDate = (dateStr: string): Date | null => {
+  if (!dateStr) return null;
+  const s = dateStr.trim();
+
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+
+  m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+
+  m = s.match(/^(\d{1,2})[-\s]([A-Za-z]{3,9})[-\s](\d{4})$/);
+  if (m) {
+    const idx = MONTH_NAMES.findIndex(mo => m![2].toLowerCase().startsWith(mo));
+    if (idx >= 0) return new Date(Number(m[3]), idx, Number(m[1]));
+  }
+
+  const native = new Date(s);
+  return isNaN(native.getTime()) ? null : native;
+};
+
+const statusTone = (status?: string): 'working' | 'holiday' | 'exam' | 'default' => {
+  const s = (status || '').toLowerCase();
+  if (s.includes('holiday')) return 'holiday';
+  if (s.includes('exam')) return 'exam';
+  if (s.includes('working')) return 'working';
+  return 'default';
+};
+
+// A remark is only worth flagging on the grid if it carries real content —
+// filters out placeholder values like "-", "N/A", or an empty string so the
+// gold marker means something instead of appearing on every single day.
+const hasMeaningfulRemark = (remarks?: string): boolean => {
+  if (!remarks) return false;
+  const trimmed = remarks.trim();
+  if (trimmed === '') return false;
+  const placeholder = ['-', '--', 'n/a', 'na', 'none'];
+  return !placeholder.includes(trimmed.toLowerCase());
+};
+
+interface DayCell {
+  dayNum: number | null;
+  row: any | null;
+}
+
+const buildMonthGrid = (year: number, month: number, rows: any[]): DayCell[][] => {
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const cells: DayCell[] = [];
+
+  for (let i = 0; i < firstWeekday; i++) {
+    cells.push({ dayNum: null, row: null });
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const row = rows.find(r => r._date.getDate() === d) || null;
+    cells.push({ dayNum: d, row });
+  }
+
+  while (cells.length % 7 !== 0) {
+    cells.push({ dayNum: null, row: null });
+  }
+
+  const weeks: DayCell[][] = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    weeks.push(cells.slice(i, i + 7));
+  }
+
+  return weeks;
+};
 
 const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData, savedUsername }) => {
   const [loading, setLoading] = useState(false);
@@ -17,8 +100,11 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
   const [initialSyncStarted, setInitialSyncStarted] = useState(false);
   const [captchaStatus, setCaptchaStatus] = useState<{ pending: boolean; base64: string | null }>({ pending: false, base64: null });
   const [captchaInput, setCaptchaInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [activeMonthIdx, setActiveMonthIdx] = useState(0);
 
-  const netId = savedUsername?.split('@')[0] || '';
+  const username = savedUsername || '';
+  const netId = username.split('@')[0] || '';
 
   useEffect(() => {
     let savedPortalPwd = localStorage.getItem('portal_password');
@@ -28,22 +114,22 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
   }, []);
 
   useEffect(() => {
-    if (!calendarData && !initialSyncStarted && netId) {
+    if (!initialSyncStarted && netId) {
       setInitialSyncStarted(true);
       let savedPortalPwd = localStorage.getItem('portal_password');
       if (savedPortalPwd) {
         fetchCalendar(savedPortalPwd);
       }
     }
-  }, [calendarData, initialSyncStarted, netId]);
+  }, [initialSyncStarted, netId]);
 
   const submitCaptcha = async () => {
-    if (!captchaInput) return;
+    if (!captchaInput || !username) return;
     try {
       await fetch('http://localhost:5000/api/calendar/captcha/solve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: netId, captchaText: captchaInput })
+        body: JSON.stringify({ username, captchaText: captchaInput })
       });
       setCaptchaStatus({ pending: false, base64: null });
       setCaptchaInput('');
@@ -53,37 +139,46 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
   };
 
   const fetchCalendar = async (pwdToUse: string) => {
+    if (!username) {
+      setError('Username is missing. Please log in again.');
+      return;
+    }
+
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
     try {
       setLoading(true);
       setError(null);
-      
-      const pollInterval = setInterval(async () => {
+
+      pollInterval = setInterval(async () => {
         try {
-          const pollRes = await fetch(`http://localhost:5000/api/calendar/status/${netId}`);
+          const pollRes = await fetch(`http://localhost:5000/api/calendar/status/${encodeURIComponent(username)}`);
           const pollData = await pollRes.json();
           if (pollData.pending) {
             setCaptchaStatus({ pending: true, base64: pollData.base64 });
           } else {
             setCaptchaStatus({ pending: false, base64: null });
           }
-        } catch (e) {}
+        } catch (e) { }
       }, 2000);
 
       const finalPwd = pwdToUse || localStorage.getItem('portal_password') || '';
-      
+
       const res = await fetch('http://localhost:5000/api/calendar/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: savedUsername, password: finalPwd })
+        body: JSON.stringify({ username, password: finalPwd })
       });
-      
-      clearInterval(pollInterval);
+
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = null;
       setCaptchaStatus({ pending: false, base64: null });
-      
+
       const data = await res.json();
       if (data.success) {
         setCalendarData(data);
         localStorage.setItem('academia_calendar', JSON.stringify(data));
+        localStorage.setItem('academia_calendar_user', username);
         localStorage.setItem('portal_password', finalPwd);
       } else {
         setError(data.error || 'Failed to connect to Student Portal');
@@ -94,6 +189,7 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
     } catch (err) {
       setError('Network error connecting to Student Portal');
     } finally {
+      if (pollInterval) clearInterval(pollInterval);
       setLoading(false);
     }
   };
@@ -107,199 +203,355 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
     await fetchCalendar(password);
   };
 
+  // =========================
+  // GROUP ROWS INTO MONTHS
+  // =========================
+
+  const monthGroups = useMemo(() => {
+    if (!calendarData?.rows) return [];
+
+    const map = new Map<string, { label: string; year: number; month: number; rows: any[] }>();
+
+    calendarData.rows.forEach((row: any) => {
+      const d = parseCalendarDate(row.date);
+      if (!d) return;
+
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          label: d.toLocaleString('default', { month: 'long', year: 'numeric' }),
+          year: d.getFullYear(),
+          month: d.getMonth(),
+          rows: [],
+        });
+      }
+
+      map.get(key)!.rows.push({ ...row, _date: d });
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.year - b.year || a.month - b.month);
+  }, [calendarData]);
+
+  // Default to the month containing today, if present, else the first month
+  useEffect(() => {
+    if (monthGroups.length === 0) return;
+
+    const today = new Date();
+    const todayIdx = monthGroups.findIndex(
+      g => g.year === today.getFullYear() && g.month === today.getMonth()
+    );
+
+    setActiveMonthIdx(todayIdx >= 0 ? todayIdx : 0);
+  }, [monthGroups.length]);
+
+  const activeGroup = monthGroups[activeMonthIdx];
+
+  const activeGrid = useMemo(() => {
+    if (!activeGroup) return [];
+    return buildMonthGrid(activeGroup.year, activeGroup.month, activeGroup.rows);
+  }, [activeGroup]);
+
+  const monthStats = useMemo(() => {
+    if (!activeGroup) return { working: 0, holiday: 0, total: 0 };
+
+    let working = 0;
+    let holiday = 0;
+
+    activeGroup.rows.forEach(r => {
+      const tone = statusTone(r.status);
+      if (tone === 'working') working++;
+      if (tone === 'holiday') holiday++;
+    });
+
+    return { working, holiday, total: activeGroup.rows.length };
+  }, [activeGroup]);
+
+  const today = new Date();
+  const isToday = (dayNum: number | null) =>
+    !!activeGroup &&
+    dayNum !== null &&
+    activeGroup.year === today.getFullYear() &&
+    activeGroup.month === today.getMonth() &&
+    dayNum === today.getDate();
+
+  // =========================
+  // CAPTCHA MODAL
+  // =========================
+
   const captchaModal = captchaStatus.pending && captchaStatus.base64 ? (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-      backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
-      display: 'flex', alignItems: 'center', justifyContent: 'center'
-    }}>
-      <div style={{
-        background: 'white', padding: '2rem', borderRadius: '12px',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.1)', maxWidth: '400px', width: '90%'
-      }}>
-        <h3 style={{ marginTop: 0, marginBottom: '1rem', color: '#1e293b' }}>Manual Captcha Required</h3>
-        <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1rem' }}>
-          Our automatic solver couldn't read this one. Please enter the text below to continue.
+    <div className="cal-modal-overlay">
+      <div className="cal-modal">
+        <span className="cal-modal-eyebrow">Verification Required</span>
+        <h3 className="cal-modal-title">Manual Captcha</h3>
+        <p className="cal-modal-copy">
+          Our automatic solver couldn't read this one. Enter the text shown below to continue.
         </p>
-        <div style={{ textAlign: 'center', marginBottom: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px' }}>
-          <img src={`data:image/png;base64,${captchaStatus.base64}`} alt="Captcha" style={{ maxWidth: '100%' }} />
+
+        <div className="cal-captcha-image">
+          <img src={`data:image/png;base64,${captchaStatus.base64}`} alt="Captcha" />
         </div>
-        <input 
-          type="text" 
-          className="login-input" 
-          placeholder="Enter captcha"
+
+        <input
+          type="text"
+          className="cal-login-input"
+          placeholder="Enter captcha text"
           value={captchaInput}
           onChange={e => setCaptchaInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') submitCaptcha(); }}
           autoFocus
         />
-        <button className="primary-btn" onClick={submitCaptcha} style={{ width: '100%', marginTop: '1rem' }}>
+
+        <button className="cal-primary-btn" onClick={submitCaptcha}>
           Submit
         </button>
       </div>
     </div>
   ) : null;
 
-  if (calendarData) {
+  // =========================
+  // CALENDAR LOADED
+  // =========================
+
+  if (calendarData ) {
     return (
-      <div className="data-grid full-width">
-        <section className="data-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-             <h2>Academic Calendar</h2>
+      <div className="cal-tab">
+        {captchaModal}
+
+        <div className="cal-header">
+          <div className="cal-header-heading">
+            <span className="cal-eyebrow">Student Portal</span>
+            <h2 className="cal-title">Academic Calendar</h2>
           </div>
-          
-          <div className="stats-grid">
-            <div className="stat-card" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', border: '1px solid #bfdbfe' }}>
-              <h3>Working Days</h3>
-              <div className="stat-value" style={{ color: '#1e40af' }}>{calendarData.stats?.workingDays || '0'}</div>
+
+          <div className="cal-header-stats">
+            <div className="cal-stat">
+              <span className="cal-stat-value cal-stat-working">
+                {calendarData.stats?.workingDays ?? '0'}
+              </span>
+              <span className="cal-stat-caption">Working</span>
             </div>
-            <div className="stat-card" style={{ background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)', border: '1px solid #fecaca' }}>
-              <h3>Holidays</h3>
-              <div className="stat-value" style={{ color: '#991b1b' }}>{calendarData.stats?.holidays || '0'}</div>
+
+            <div className="cal-stat">
+              <span className="cal-stat-value cal-stat-holiday">
+                {calendarData.stats?.holidays ?? '0'}
+              </span>
+              <span className="cal-stat-caption">Holidays</span>
             </div>
-            <div className="stat-card" style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', border: '1px solid #bbf7d0' }}>
-              <h3>Total Days</h3>
-              <div className="stat-value" style={{ color: '#166534' }}>{calendarData.stats?.totalDays || '0'}</div>
+
+            <div className="cal-stat">
+              <span className="cal-stat-value cal-stat-total">
+                {calendarData.stats?.totalDays ?? '0'}
+              </span>
+              <span className="cal-stat-caption">Total</span>
             </div>
           </div>
-          
-          <div className="table-responsive" style={{ marginTop: '2rem' }}>
-            <table className="timetable-matrix">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Day</th>
-                  <th>Status</th>
-                  <th>Week</th>
-                  <th>Day Order</th>
-                  <th>Remarks</th>
-                </tr>
-              </thead>
-              <tbody>
-                {calendarData.rows && calendarData.rows.length > 0 ? (
-                  calendarData.rows.map((row: any, idx: number) => {
-                    const isHoliday = row.status?.toLowerCase().includes('holiday');
-                    const isWorkingDay = row.status?.toLowerCase().includes('working day');
-                    
-                    let statusBadgeColor = '#e2e8f0';
-                    let statusTextColor = '#475569';
-                    if (isHoliday) {
-                      statusBadgeColor = '#fee2e2';
-                      statusTextColor = '#ef4444';
-                    } else if (isWorkingDay) {
-                      statusBadgeColor = '#dbeafe';
-                      statusTextColor = '#3b82f6';
+
+          <button
+            onClick={() => fetchCalendar(password)}
+            className="cal-sync-btn"
+            disabled={loading}
+          >
+            {loading ? 'Syncing…' : 'Sync Again'}
+          </button>
+        </div>
+
+        {error && <p className="cal-error">{error}</p>}
+
+        {monthGroups.length > 0 ? (
+          <>
+            {/* MONTH TABS */}
+
+            {monthGroups.length > 1 && (
+              <div className="cal-month-tabs" role="tablist">
+                {monthGroups.map((g, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeMonthIdx === i}
+                    className={`cal-month-tab ${activeMonthIdx === i ? 'active' : ''}`}
+                    onClick={() => setActiveMonthIdx(i)}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {activeGroup && (
+              <div className="cal-grid-card">
+
+                <div className="cal-grid-header">
+                  <h3 className="cal-grid-title">{activeGroup.label}</h3>
+
+                  <div className="cal-grid-mini-stats">
+                    <span><span className="dot tone-working" /> {monthStats.working} working</span>
+                    <span><span className="dot tone-holiday" /> {monthStats.holiday} holiday</span>
+                  </div>
+                </div>
+
+                <div className="cal-weekday-row">
+                  {WEEKDAYS.map(d => (
+                    <span key={d} className="cal-weekday-label">{d}</span>
+                  ))}
+                </div>
+
+                <div className="cal-grid">
+                  {activeGrid.flat().map((cell, idx) => {
+                    if (cell.dayNum === null) {
+                      return <div key={idx} className="cal-cell cal-cell-empty" />;
                     }
 
+                    const tone = cell.row ? statusTone(cell.row.status) : 'nodata';
+                    const remarkIsMeaningful = hasMeaningfulRemark(cell.row?.remarks);
+                    const tooltip = cell.row
+                      ? `${cell.row.status || ''}${remarkIsMeaningful ? ' — ' + cell.row.remarks : ''}`
+                      : undefined;
+
                     return (
-                      <tr key={idx}>
-                        <td style={{ fontWeight: 500, color: '#0f172a' }}>{row.date}</td>
-                        <td>{row.day}</td>
-                        <td>
-                          <span style={{ 
-                            background: statusBadgeColor, 
-                            color: statusTextColor, 
-                            padding: '4px 10px', 
-                            borderRadius: '12px',
-                            fontSize: '0.8rem',
-                            fontWeight: 600,
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {row.status}
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{ color: '#64748b', fontSize: '0.9rem', background: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
-                            {row.week}
-                          </span>
-                        </td>
-                        <td>
-                          {row.dayOrder && row.dayOrder !== '-' ? (
-                            <span style={{ color: '#10b981', fontWeight: 600, background: '#d1fae5', padding: '4px 8px', borderRadius: '4px', fontSize: '0.9rem' }}>
-                              {row.dayOrder}
-                            </span>
-                          ) : (
-                            <span style={{ color: '#94a3b8' }}>-</span>
-                          )}
-                        </td>
-                        <td style={{ color: '#475569', fontSize: '0.95rem' }}>{row.remarks || '-'}</td>
-                      </tr>
+                      <div
+                        key={idx}
+                        className={`cal-cell tone-${tone} ${isToday(cell.dayNum) ? 'is-today' : ''}`}
+                        title={tooltip}
+                      >
+                        <span className="cal-cell-daynum">{cell.dayNum}</span>
+
+                        {cell.row?.dayOrder && cell.row.dayOrder !== '-' && (
+                          <span className="cal-cell-dayorder">{cell.row.dayOrder}</span>
+                        )}
+
+                        {remarkIsMeaningful && <span className="cal-cell-dot" />}
+                      </div>
                     );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
-                      No calendar data available for the current term.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          
-          <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-            <button onClick={() => fetchCalendar(password)} className="primary-btn mt-3" disabled={loading}>
-              {loading ? 'Syncing...' : 'Sync Again'}
+                  })}
+                </div>
+
+                <div className="cal-legend">
+                  <span className="cal-legend-item">
+                    <span className="dot tone-working" /> Working Day
+                  </span>
+                  <span className="cal-legend-item">
+                    <span className="dot tone-holiday" /> Holiday
+                  </span>
+                  <span className="cal-legend-item">
+                    <span className="dot tone-exam" /> Exam / Event
+                  </span>
+                  <span className="cal-legend-item">
+                    <span className="cal-legend-dayorder">3</span> Day Order
+                  </span>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="cal-empty-state">
+            <p>No calendar data available for the current term.</p>
+            <button
+              onClick={() => fetchCalendar(password)}
+              className="cal-primary-btn"
+              disabled={loading}
+            >
+              {loading ? 'Syncing…' : 'Retry Sync'}
             </button>
           </div>
-        </section>
+        )}
       </div>
     );
   }
 
-  // No data yet — show skeleton while loading
+  // =========================
+  // NO DATA YET — SKELETON
+  // =========================
+
   if (loading) {
     return <SkeletonLoader type="table" />;
   }
 
+  // =========================
+  // LOGIN SCREEN
+  // =========================
+
   return (
-    <div className="data-grid full-width" style={{ justifyContent: 'center', display: 'flex', marginTop: '2rem' }}>
+    <div className="cal-tab cal-tab-centered">
       {captchaModal}
-      <section className="data-card" style={{ maxWidth: '400px', width: '100%' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Academic Calendar</h2>
-        
+
+      <section className="cal-login-card">
+        <span className="cal-eyebrow cal-login-eyebrow">Student Portal</span>
+        <h2 className="cal-login-title">Academic Calendar</h2>
+
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <LoadingScreen message="Connecting & Auto-solving Captcha..." />
+          <div className="cal-loading-wrap">
+            <LoadingScreen message="Connecting & auto-solving captcha..." />
           </div>
         ) : (
           <>
-            <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-              Grades are hosted on the SRM Student Portal.<br/>
-              Enter your password to fetch your marks.
+            <p className="cal-login-copy">
+              The academic calendar is hosted on the SRM Student Portal.
+              <br />
+              Enter your password to fetch it.
             </p>
-            
+
             {error && (
-              <div style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.9rem', textAlign: 'center' }}>
+              <div className="cal-error cal-error-centered">
                 {error}
               </div>
             )}
-            
+
             <form onSubmit={handleLogin}>
-              <div className="input-group" style={{ marginBottom: '1rem' }}>
+              <div className="cal-input-group">
                 <label>NetID</label>
-                <input 
-                  type="text" 
-                  className="login-input"
-                  value={netId} 
-                  disabled 
-                  style={{ background: '#f3f4f6', cursor: 'not-allowed' }}
+                <input
+                  type="text"
+                  className="cal-login-input cal-login-input-disabled"
+                  value={netId}
+                  disabled
                 />
               </div>
-              
-              <div className="input-group" style={{ marginBottom: '1rem' }}>
+
+              <div className="cal-input-group">
                 <label>Portal Password</label>
-                <input 
-                  type="password" 
-                  className="login-input"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Password"
-                  autoFocus
-                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="cal-login-input"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Password"
+                    autoFocus
+                    style={{ paddingRight: '40px', width: '100%' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ 
+                      position: 'absolute', 
+                      right: '12px', 
+                      background: 'none', 
+                      border: 'none', 
+                      color: 'var(--text-muted, #757D8F)', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: 0
+                    }}
+                  >
+                    {showPassword ? (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
-              
-              <button type="submit" className="primary-btn" style={{ width: '100%', marginTop: '1rem' }}>
+
+              <button type="submit" className="cal-primary-btn cal-login-submit">
                 Login to Portal
               </button>
             </form>

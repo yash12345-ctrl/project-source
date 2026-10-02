@@ -8,6 +8,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
+      devOptions: {
+        enabled: true,
+        suppressWarnings: true
+      },
       manifest: {
         name: 'Academia',
         short_name: 'Academia',

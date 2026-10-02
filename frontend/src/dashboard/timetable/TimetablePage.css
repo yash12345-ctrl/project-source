@@ -1,0 +1,811 @@
+/* --- Timetable Page: premium redesign, fully scoped under .tt-* --- */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap');
+
+.tt-page {
+    --tt-surface: rgba(255, 255, 255, 0.025);
+    --tt-surface-soft: rgba(255, 255, 255, 0.015);
+    --tt-border: rgba(255, 255, 255, 0.07);
+    --tt-text: #f5f5f4;
+    --tt-text-soft: rgba(245, 245, 244, 0.58);
+    --tt-text-faint: rgba(245, 245, 244, 0.3);
+    --tt-font-display: 'Fraunces', Georgia, serif;
+    --tt-font-body: 'Inter', -apple-system, sans-serif;
+    --tt-accent-default: #34d399;
+
+    font-family: var(--tt-font-body);
+    color: var(--tt-text);
+    width: 100%;
+}
+
+.tt-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ---------- Header ---------- */
+.tt-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.tt-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.tt-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #34d399;
+}
+
+.tt-title {
+    font-family: var(--tt-font-display);
+    font-size: 2.1rem;
+    font-weight: 600;
+    line-height: 1.1;
+    margin: 0.15rem 0 0;
+    letter-spacing: -0.01em;
+    color: var(--tt-text);
+}
+
+.tt-subtitle {
+    margin: 0.35rem 0 0;
+    font-size: 13.5px;
+    color: var(--tt-text-soft);
+}
+
+.tt-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* ---------- Legend ---------- */
+.tt-legend {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem 0.9rem;
+    background: var(--tt-surface);
+    border: 1px solid var(--tt-border);
+    border-radius: 999px;
+    flex-wrap: wrap;
+}
+
+.tt-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--tt-text-soft);
+    white-space: nowrap;
+}
+
+.tt-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ---------- View toggle ---------- */
+.tt-view-toggle {
+    display: inline-flex;
+    padding: 3px;
+    background: var(--tt-surface);
+    border: 1px solid var(--tt-border);
+    border-radius: 999px;
+}
+
+.tt-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: none;
+    background: transparent;
+    color: var(--tt-text-soft);
+    font-family: var(--tt-font-body);
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+    white-space: nowrap;
+}
+
+.tt-toggle-btn svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+}
+
+.tt-toggle-btn:hover {
+    color: var(--tt-text);
+}
+
+.tt-toggle-btn.tt-toggle-active {
+    background: #34d399;
+    color: #05130d;
+}
+
+.tt-toggle-btn:focus-visible {
+    outline: 2px solid #34d399;
+    outline-offset: 2px;
+}
+
+/* ---------- Card shell (shared by grid + day view) ---------- */
+.tt-card {
+    background: var(--tt-surface);
+    backdrop-filter: blur(18px);
+    border: 1px solid var(--tt-border);
+    border-radius: 18px;
+    padding: 0.5rem;
+    box-shadow: 0 20px 44px -26px rgba(0, 0, 0, 0.7);
+    animation: tt-fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.tt-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.35), transparent);
+    pointer-events: none;
+}
+
+@keyframes tt-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ================================================================
+   GRID / "Fit to screen" MODE
+   ================================================================ */
+
+.tt-table-scroll {
+    border-radius: 14px;
+}
+
+.tt-table-scroll.tt-mode-fit {
+    overflow-x: hidden;
+}
+
+.tt-table-scroll.tt-mode-fit .tt-matrix {
+    table-layout: fixed;
+    width: 100%;
+    min-width: 0;
+}
+
+.tt-matrix {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+}
+
+.tt-matrix thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: rgba(10, 10, 10, 0.92);
+    backdrop-filter: blur(10px);
+    color: var(--tt-text-soft);
+    font-weight: 600;
+    text-align: center;
+    padding: 0.55rem 0.25rem;
+    border-bottom: 1px solid var(--tt-border);
+    vertical-align: middle;
+}
+
+.tt-slot-num {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: var(--tt-text);
+}
+
+.tt-slot-time {
+    display: block;
+    margin-top: 1px;
+    font-size: 8.5px;
+    font-weight: 500;
+    color: var(--tt-text-faint);
+    white-space: normal;
+    line-height: 1.15;
+}
+
+.tt-matrix th.tt-corner {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    text-align: left;
+    background: rgba(10, 10, 10, 0.96);
+    color: var(--tt-text-faint);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    width: 96px;
+}
+
+.tt-day-label {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: rgba(10, 10, 10, 0.92);
+    backdrop-filter: blur(10px);
+    padding: 0.6rem 0.5rem;
+    font-weight: 600;
+    color: var(--tt-text);
+    white-space: nowrap;
+    border-bottom: 1px solid var(--tt-border);
+    vertical-align: middle;
+}
+
+.tt-day-name {
+    display: block;
+    font-size: 12px;
+}
+
+.tt-today-badge {
+    display: inline-block;
+    margin-top: 3px;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #05130d;
+    background: #34d399;
+    padding: 1px 6px;
+    border-radius: 999px;
+}
+
+tr.tt-row-today .tt-day-label {
+    color: #34d399;
+    box-shadow: inset 3px 0 0 #34d399;
+}
+
+tr.tt-row-today .tt-slot {
+    background: rgba(52, 211, 153, 0.035);
+}
+
+/* ---------- Slot cells ---------- */
+.tt-slot {
+    position: relative;
+    border-bottom: 1px solid var(--tt-border);
+    padding: 0.3rem;
+    vertical-align: middle;
+    height: 60px;
+    text-align: center;
+    transition: background 0.2s ease, transform 0.15s ease;
+    overflow: hidden;
+}
+
+.tt-slot-free {
+    color: var(--tt-text-faint);
+    background-image: repeating-linear-gradient(135deg,
+            rgba(255, 255, 255, 0.014) 0px,
+            rgba(255, 255, 255, 0.014) 5px,
+            transparent 5px,
+            transparent 11px);
+}
+
+.tt-slot-filled {
+    background: var(--tt-accent-soft, rgba(52, 211, 153, 0.16));
+    border-radius: 9px;
+    border: 1px solid transparent;
+    cursor: default;
+}
+
+.tt-slot-filled:hover {
+    border-color: var(--tt-accent, #34d399);
+    transform: translateY(-1px);
+}
+
+.tt-slot-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 0.2rem 0.25rem;
+    min-width: 0;
+}
+
+.tt-slot-code {
+    font-weight: 700;
+    font-size: 9.5px;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    color: var(--tt-accent, #34d399);
+    max-width: 100%;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+}
+
+.tt-slot-room {
+    font-size: 9.5px;
+    color: var(--tt-text-soft);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* live "now" indicator on the grid */
+.tt-slot-now {
+    box-shadow: 0 0 0 1.5px var(--tt-accent, #34d399), 0 10px 22px -12px rgba(52, 211, 153, 0.55);
+}
+
+.tt-now-dot {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--tt-accent, #34d399);
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.22);
+    animation: tt-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes tt-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.35;
+    }
+}
+
+/* ================================================================
+   DAY VIEW / "Scroll view" MODE — day-by-day list
+   ================================================================ */
+
+.tt-daylist {
+    display: flex;
+    flex-direction: column;
+}
+
+.tt-daylist-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0.4rem 0.6rem;
+    gap: 0.5rem;
+}
+
+.tt-daylist-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--tt-border);
+    background: var(--tt-surface-soft);
+    color: var(--tt-text-soft);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    flex-shrink: 0;
+}
+
+.tt-daylist-nav-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+.tt-daylist-nav-btn:hover {
+    background: rgba(52, 211, 153, 0.12);
+    color: #34d399;
+    border-color: rgba(52, 211, 153, 0.35);
+}
+
+.tt-daylist-nav-btn:focus-visible {
+    outline: 2px solid #34d399;
+    outline-offset: 2px;
+}
+
+.tt-daylist-current {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.tt-daylist-current-name {
+    font-family: var(--tt-font-display);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--tt-text);
+    letter-spacing: -0.01em;
+}
+
+.tt-daylist-current-badge {
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #05130d;
+    background: #34d399;
+    padding: 1px 7px;
+    border-radius: 999px;
+}
+
+/* day pills for quick jumping */
+.tt-daylist-pills {
+    display: flex;
+    gap: 0.4rem;
+    overflow-x: auto;
+    padding: 0.1rem 0.4rem 0.7rem;
+    scrollbar-width: none;
+}
+
+.tt-daylist-pills::-webkit-scrollbar {
+    display: none;
+}
+
+/* Day Progress Bar */
+.tt-day-progress {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 999px;
+    margin: 0 0.4rem 0.8rem;
+    overflow: hidden;
+    position: relative;
+}
+
+.tt-day-progress-fill {
+    height: 100%;
+    background: #34d399;
+    border-radius: 999px;
+    transition: width 1s ease-out;
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.5);
+}
+
+.tt-daylist-pill {
+    flex-shrink: 0;
+    border: 1px solid var(--tt-border);
+    background: var(--tt-surface-soft);
+    color: var(--tt-text-soft);
+    font-family: var(--tt-font-body);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.tt-daylist-pill:hover {
+    color: var(--tt-text);
+}
+
+.tt-daylist-pill.tt-daylist-pill-active {
+    background: #34d399;
+    border-color: #34d399;
+    color: #05130d;
+}
+
+.tt-daylist-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 0.15rem 0.4rem 0.5rem;
+}
+
+.tt-daylist-row {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 13px;
+    background: var(--tt-surface-soft);
+    border: 1px solid var(--tt-border);
+    transition: background 0.2s ease, opacity 0.2s ease, transform 0.15s ease;
+    overflow: hidden; /* Ensure progress bar is clipped to rounded corners */
+}
+
+.tt-daylist-row-filled {
+    background: var(--tt-accent-soft, rgba(52, 211, 153, 0.14));
+    border-color: transparent;
+    box-shadow: inset 3px 0 0 var(--tt-accent, #34d399);
+}
+
+.tt-daylist-row-filled:hover {
+    transform: translateX(2px);
+}
+
+.tt-daylist-row-now {
+    box-shadow: inset 3px 0 0 var(--tt-accent, #34d399), 0 0 0 1px var(--tt-accent, #34d399), 0 12px 24px -14px rgba(52, 211, 153, 0.5);
+}
+
+.tt-daylist-row-past {
+    opacity: 0.5;
+}
+
+.tt-slot-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--tt-accent-soft, rgba(52, 211, 153, 0.2)));
+    border-right: 2px solid var(--tt-accent, #34d399);
+    box-shadow: 4px 0 16px var(--tt-accent, rgba(52, 211, 153, 0.4));
+    transition: width 1s ease-out;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.tt-daylist-time {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 84px;
+    flex-shrink: 0;
+    padding-top: 1px;
+    position: relative;
+    z-index: 1;
+}
+
+.tt-daylist-time-range {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--tt-text-soft);
+    line-height: 1.35;
+}
+
+.tt-now-badge {
+    align-self: flex-start;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #05130d;
+    background: #34d399;
+    padding: 1px 7px;
+    border-radius: 999px;
+}
+
+.tt-daylist-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+
+.tt-daylist-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--tt-text);
+    line-height: 1.3;
+}
+
+.tt-daylist-meta {
+    font-size: 11px;
+    color: var(--tt-text-soft);
+}
+
+.tt-daylist-free {
+    font-size: 12.5px;
+    font-style: italic;
+    color: var(--tt-text-faint);
+}
+
+/* ---------- Empty state ---------- */
+.tt-empty {
+    text-align: center;
+    padding: 4.5rem 2rem;
+    background: var(--tt-surface);
+    border: 1px solid var(--tt-border);
+    border-radius: 18px;
+}
+
+.tt-empty-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 1.1rem;
+    color: rgba(255, 255, 255, 0.28);
+}
+
+.tt-empty h3 {
+    font-family: var(--tt-font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 0.4rem;
+    color: var(--tt-text);
+}
+
+.tt-empty p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--tt-text-soft);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+    .tt-mode-fit .tt-slot-room {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .tt-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tt-title {
+        font-size: 1.65rem;
+    }
+
+    .tt-header-controls {
+        justify-content: space-between;
+    }
+
+    .tt-legend {
+        border-radius: 12px;
+    }
+
+    /* Below this width even the fixed layout gets cramped, so fall back to scroll */
+    .tt-table-scroll.tt-mode-fit {
+        overflow-x: auto;
+    }
+
+    .tt-table-scroll.tt-mode-fit .tt-matrix {
+        table-layout: auto;
+        min-width: 640px;
+    }
+
+    .tt-daylist-row {
+        padding: 0.65rem 0.75rem;
+    }
+
+    .tt-daylist-time {
+        min-width: 68px;
+    }
+}
+
+/* ---------- Motion & accessibility ---------- */
+@media (prefers-reduced-motion: reduce) {
+
+    .tt-card,
+    .tt-now-dot {
+        animation: none;
+    }
+}
+
+/* ===== LIGHT MODE ===== */
+[data-theme='light'] .tt-page {
+    --tt-surface: rgba(0, 0, 0, 0.04);
+    --tt-surface-soft: rgba(0, 0, 0, 0.025);
+    --tt-border: rgba(0, 0, 0, 0.1);
+    --tt-text: #1a1611;
+    --tt-text-soft: rgba(26, 22, 17, 0.6);
+    --tt-text-faint: rgba(26, 22, 17, 0.38);
+}
+
+[data-theme='light'] .tt-card {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+}
+
+[data-theme='light'] .tt-card::before {
+    background: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.4), transparent);
+}
+
+[data-theme='light'] .tt-matrix thead th {
+    background: rgba(240, 237, 234, 0.97);
+    backdrop-filter: blur(10px);
+    color: rgba(26, 22, 17, 0.6);
+    border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='light'] .tt-matrix th.tt-corner {
+    background: rgba(240, 237, 234, 0.99);
+}
+
+[data-theme='light'] .tt-day-label {
+    background: rgba(240, 237, 234, 0.96);
+    color: #1a1611;
+    border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='light'] .tt-slot {
+    border-bottom-color: rgba(0, 0, 0, 0.07);
+}
+
+[data-theme='light'] .tt-slot-free {
+    color: rgba(26, 22, 17, 0.3);
+    background-image: repeating-linear-gradient(135deg,
+        rgba(0, 0, 0, 0.018) 0px,
+        rgba(0, 0, 0, 0.018) 5px,
+        transparent 5px,
+        transparent 11px);
+}
+
+[data-theme='light'] .tt-legend {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='light'] .tt-view-toggle {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='light'] .tt-daylist-nav-btn {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: rgba(26, 22, 17, 0.6);
+}
+
+[data-theme='light'] .tt-daylist-pill {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: rgba(26, 22, 17, 0.6);
+}
+
+[data-theme='light'] .tt-daylist-row {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='light'] .tt-day-progress {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme='light'] .tt-empty {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='light'] .tt-empty-icon {
+    color: rgba(0, 0, 0, 0.2);
+}

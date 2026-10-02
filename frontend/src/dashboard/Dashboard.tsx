@@ -1,695 +1,1338 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+
+// Import newly created sidebar components
+import Sidebar from './sidebar/Sidebar';
+import TopBar from './sidebar/TopBar';
+
+import StudentProfile from './student_profile/StudentProfile';
+import CoursePage from './course_page/CoursePage';
+import TimetablePage from './timetable/TimetablePage';
 import AttendanceTab from './AttendanceTab';
 import MarksTab from './MarksTab';
-import FeeTab from './FeeTab';
+import InternalMarksTab from './InternalMarksTab';
+import FeeTab from './fees/FeeTab';
 import CalendarTab from './CalendarTab';
 import CalculatorTab from './CalculatorTab';
-import FacultyFinderTab from './FacultyFinderTab';
-import MessTab from './MessTab';
+import ComingSoon from './coming_soon/ComingSoon';
+import SplashScreen from './splash_screen/SplashScreen';
 import Study from './Study';
 import Sem1 from './Sem1';
-
-
 import { SkeletonLoader } from '../components/SkeletonLoader';
+import { useTheme } from '../context/ThemeContext';
 import './Dashboard.css';
 
-const Dashboard: React.FC = () => {
+const BackgroundVideo = ({ theme }: { theme: 'light' | 'dark' }) => {
+  if (theme === 'light') {
+    return (
+      <div className="bg-light-premium">
+        <div className="bg-light-orb bg-light-orb-1" />
+        <div className="bg-light-orb bg-light-orb-2" />
+        <div className="bg-light-orb bg-light-orb-3" />
+        <div className="bg-light-grid" />
+      </div>
+    );
+  }
+  return (
+    <>
+      <video
+        className="bg-video"
+        autoPlay
+        loop
+        muted
+        playsInline
+        src="/v2.mp4"
+      />
+      <div className="bg-video-overlay" />
+    </>
+  );
+};
+
+const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  
+  const { theme } = useTheme();
+
   const [data, setData] = useState<any>(() => {
     if (location.state?.data) {
-      localStorage.setItem('academia_data', JSON.stringify(location.state.data));
+      localStorage.setItem(
+        'academia_data',
+        JSON.stringify(location.state.data)
+      );
+
       return location.state.data;
     }
+
     const cached = localStorage.getItem('academia_data');
-    return cached ? JSON.parse(cached) : null;
+
+    return cached
+      ? JSON.parse(cached)
+      : null;
   });
-  
-  const [attendanceData, setAttendanceData] = useState<any[] | null>(() => {
-    const cached = localStorage.getItem('academia_attendance');
-    const cachedUser = localStorage.getItem('academia_attendance_user');
-    const creds = localStorage.getItem('academia_credentials');
-    
-    if (cached && cachedUser && creds) {
-      try {
-        const { username } = JSON.parse(creds);
-        if (username === cachedUser) {
-          return JSON.parse(cached);
-        }
-      } catch (e) {}
-    }
-    return null;
-  });
-  
-  const [gradesData, setGradesData] = useState<any[] | null>(() => {
-    const cached = localStorage.getItem('academia_grades');
-    const cachedUser = localStorage.getItem('academia_attendance_user');
-    const creds = localStorage.getItem('academia_credentials');
-    if (cached && cachedUser && creds) {
-      try {
-        const { username } = JSON.parse(creds);
-        if (username === cachedUser) {
-          const parsed = JSON.parse(cached);
-          // Check if it's the new schema with grouped courses
-          if (parsed.length > 0 && !parsed[0].courses) {
-             return null;
+
+  // ==========================================
+  // ATTENDANCE DATA
+  // ==========================================
+
+  const [attendanceData, setAttendanceData] =
+    useState<any[] | null>(() => {
+
+      const cached =
+        localStorage.getItem('academia_attendance');
+
+      const cachedUser =
+        localStorage.getItem('academia_attendance_user');
+
+      const creds =
+        JSON.stringify({ username: sessionUsername });
+
+      if (cached && cachedUser && creds) {
+        try {
+          const { username } = JSON.parse(creds);
+
+          if (username === cachedUser) {
+            return JSON.parse(cached);
           }
-          return parsed;
+        } catch (e) {
+          // Ignore invalid cached data
         }
-      } catch (e) {}
-    }
-    return null;
-  });
+      }
 
-  const [cgpa, setCgpa] = useState<string | null>(() => {
-    return localStorage.getItem('academia_cgpa') || null;
-  });
+      return null;
+    });
 
-  const [feeData, setFeeData] = useState<any | null>(() => {
-    const cached = localStorage.getItem('academia_fees');
-    const cachedUser = localStorage.getItem('academia_attendance_user');
-    const creds = localStorage.getItem('academia_credentials');
-    if (cached && cachedUser && creds) {
-      try {
-        const { username } = JSON.parse(creds);
-        if (username === cachedUser) {
-          return JSON.parse(cached);
+  // ==========================================
+  // GRADES DATA
+  // ==========================================
+
+  const [gradesData, setGradesData] =
+    useState<any[] | null>(() => {
+
+      const cached =
+        localStorage.getItem('academia_grades');
+
+      const cachedUser =
+        localStorage.getItem('academia_grades_user');
+
+      const creds =
+        JSON.stringify({ username: sessionUsername });
+
+      if (cached && cachedUser && creds) {
+        try {
+          const { username } = JSON.parse(creds);
+
+          if (username === cachedUser) {
+            const parsed = JSON.parse(cached);
+
+            if (
+              parsed.length > 0 &&
+              !parsed[0].courses
+            ) {
+              return null;
+            }
+
+            return parsed;
+          }
+        } catch (e) {
+          // Ignore invalid cached data
         }
-      } catch (e) {}
-    }
-    return null;
-  });
-  
-  const [calendarData, setCalendarData] = useState<any | null>(null);
-  
-  const [activeTab, setActiveTab] = useState<'profile' | 'courses' | 'timetable' | 'attendance' | 'internal-marks' | 'marks' | 'fees' | 'calendar' | 'calculator' | 'faculty-finder' | 'mess' | 'study' | 'sem1'>('profile');
-  const [refreshing, setRefreshing] = useState(false);
-  // Default to true if we don't have data, so we show skeletons immediately
-  const [isBackgroundSyncing, setIsBackgroundSyncing] = useState<boolean>(!location.state?.data && !localStorage.getItem('academia_data'));
-  const [syncError, setSyncError] = useState<string | null>(null);
-  // Track if a background scrape is still in progress (pending: true from login)
-  const [isPendingScrape, setIsPendingScrape] = useState<boolean>(location.state?.pending === true);
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+      }
 
-  // Poll backend for fresh data when a background scrape is in progress
+      return null;
+    });
+
+  // ==========================================
+  // INTERNAL MARKS DATA
+  // ==========================================
+
+  const [internalMarksData, setInternalMarksData] =
+    useState<any[] | null>(() => {
+      const cached = localStorage.getItem('academia_internalmarks');
+      const cachedUser = localStorage.getItem('academia_internalmarks_user');
+      const creds = JSON.stringify({ username: sessionUsername });
+
+      if (cached && cachedUser && creds) {
+        try {
+          const { username } = JSON.parse(creds);
+          if (username === cachedUser) {
+            return JSON.parse(cached);
+          }
+        } catch (e) {
+          // Ignore
+        }
+      }
+      return null;
+    });
+
+  // ==========================================
+  // CGPA
+  // ==========================================
+
+  const [cgpa, setCgpa] =
+    useState<string | null>(() => {
+
+      const cachedUser =
+        localStorage.getItem('academia_grades_user');
+
+      const creds =
+        JSON.stringify({ username: sessionUsername });
+
+      if (cachedUser && creds) {
+        try {
+          const { username } = JSON.parse(creds);
+
+          if (username === cachedUser) {
+            return (
+              localStorage.getItem('academia_cgpa') ||
+              null
+            );
+          }
+        } catch (e) {
+          // Ignore invalid cached data
+        }
+      }
+
+      return null;
+    });
+
+  // ==========================================
+  // FEES DATA
+  // ==========================================
+
+  const [feeData, setFeeData] =
+    useState<any | null>(() => {
+
+      const cached =
+        localStorage.getItem('academia_fees');
+
+      const cachedUser =
+        localStorage.getItem('academia_fees_user');
+
+      const creds =
+        JSON.stringify({ username: sessionUsername });
+
+      if (cached && cachedUser && creds) {
+        try {
+          const { username } = JSON.parse(creds);
+
+          if (username === cachedUser) {
+            return JSON.parse(cached);
+          }
+        } catch (e) {
+          // Ignore invalid cached data
+        }
+      }
+
+      return null;
+    });
+
+  // ==========================================
+  // CALENDAR DATA
+  // ==========================================
+
+  const [calendarData, setCalendarData] =
+    useState<any | null>(() => {
+
+      const cached =
+        localStorage.getItem('academia_calendar');
+
+      const cachedUser =
+        localStorage.getItem('academia_calendar_user');
+
+      const creds =
+        JSON.stringify({ username: sessionUsername });
+
+      if (cached && cachedUser && creds) {
+        try {
+          const { username } = JSON.parse(creds);
+
+          if (username === cachedUser) {
+            return JSON.parse(cached);
+          }
+        } catch (e) {
+          // Ignore invalid cached data
+        }
+      }
+
+      return null;
+    });
+
+  // ==========================================
+  // TODAY'S DAY ORDER
+  // ==========================================
+  const todayDayOrder = useMemo(() => {
+    if (!calendarData?.rows) return null;
+    
+    const MONTH_NAMES = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const parseDate = (s: string) => {
+      const clean = s.replace(/today/i, '').trim();
+      let m = clean.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      m = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+      if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+      m = clean.match(/^(\d{1,2})[-\s]([A-Za-z]{3,9})[-\s](\d{4})$/);
+      if (m) {
+        const idx = MONTH_NAMES.findIndex(mo => m![2].toLowerCase().startsWith(mo));
+        if (idx >= 0) return new Date(Number(m[3]), idx, Number(m[1]));
+      }
+      return new Date(clean);
+    };
+
+    const today = new Date();
+    const todayY = today.getFullYear();
+    const todayM = today.getMonth();
+    const todayD = today.getDate();
+
+    const row = calendarData.rows.find((r: any) => {
+      if (!r.date) return false;
+      const d = parseDate(r.date.trim());
+      if (!d || isNaN(d.getTime())) return false;
+      return d.getFullYear() === todayY && d.getMonth() === todayM && d.getDate() === todayD;
+    });
+
+    return (row?.dayOrder && row.dayOrder !== '-') ? row.dayOrder : null;
+  }, [calendarData]);
+
+  // ==========================================
+  // UI STATE
+  // ==========================================
+
+  const [
+    activeTab,
+    setActiveTab
+  ] = useState<
+    'profile' |
+    'courses' |
+    'timetable' |
+    'attendance' |
+    'internal-marks' |
+    'marks' |
+    'fees' |
+    'calendar' |
+    'calculator' |
+    'faculty-finder' |
+    'mess' |
+    'study' |
+    'sem1'
+  >(() => {
+    return (localStorage.getItem('dashboard_active_tab') as any) || 'profile';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('dashboard_active_tab', activeTab);
+  }, [activeTab]);
+
+
+
+  const [
+    isBackgroundSyncing,
+    setIsBackgroundSyncing
+  ] = useState<boolean>(
+    !location.state?.data &&
+    !localStorage.getItem('academia_data')
+  );
+
+  const [syncError, setSyncError] =
+    useState<string | null>(null);
+
+  const [isPendingScrape, setIsPendingScrape] =
+    useState<boolean>(
+      location.state?.pending === true
+    );
+
+  const [portalError, setPortalError] =
+    useState<string | null>(null);
+
+  const pollIntervalRef =
+    useRef<ReturnType<typeof setInterval> | null>(
+      null
+    );
+
+  // ==========================================
+  // POLL PENDING SCRAPE
+  // ==========================================
+
   useEffect(() => {
     if (!isPendingScrape) return;
-    const creds = localStorage.getItem('academia_credentials');
+
+    const creds =
+      JSON.stringify({ username: sessionUsername });
+
     if (!creds) return;
-    const { username } = JSON.parse(creds);
 
-    console.log('[Dashboard] Background scrape in progress, polling for fresh data...');
-    pollIntervalRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`http://localhost:5000/api/academia/cached/${encodeURIComponent(username)}`);
-        if (res.ok) {
-          const freshData = await res.json();
-          if (freshData.success) {
-            console.log('[Dashboard] Fresh data arrived! Updating dashboard.');
-            setData(freshData);
-            localStorage.setItem('academia_data', JSON.stringify(freshData));
-            setIsPendingScrape(false);
-            setIsBackgroundSyncing(false);
-            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    const { username } =
+      JSON.parse(creds);
+
+    pollIntervalRef.current =
+      setInterval(async () => {
+        try {
+          const res = await fetch(
+            `http://localhost:5000/api/academia/cached/${encodeURIComponent(username)}`
+          );
+
+          if (res.ok) {
+            const freshData =
+              await res.json();
+
+            if (freshData.success) {
+              setData(freshData);
+
+              localStorage.setItem(
+                'academia_data',
+                JSON.stringify(freshData)
+              );
+
+              setIsPendingScrape(false);
+              setIsBackgroundSyncing(false);
+
+              if (pollIntervalRef.current) {
+                clearInterval(
+                  pollIntervalRef.current
+                );
+              }
+            }
           }
+        } catch (e) {
+          // Ignore polling error
         }
-      } catch (e) { /* ignore poll errors */ }
-    }, 3000);
+      }, 3000);
 
-    return () => { if (pollIntervalRef.current) clearInterval(pollIntervalRef.current); };
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(
+          pollIntervalRef.current
+        );
+      }
+    };
   }, [isPendingScrape]);
 
+  // ==========================================
+  // INITIAL SYNC
+  // ==========================================
+
   useEffect(() => {
-    if (!location.state?.data && !location.state?.pending) {
+    if (
+      !location.state?.data &&
+      !location.state?.pending
+    ) {
       handleBackgroundSync();
+    } else {
+      syncPortalTabs();
     }
-  }, []);
+  }, [location.state?.data, location.state?.pending]);
+
+  const handlePortalError = (error: string) => {
+    setPortalError(error);
+    const lowerError = error.toLowerCase();
+    
+    if (lowerError.includes('invalid') || lowerError.includes('incorrect') || lowerError.includes('password') || lowerError.includes('credentials')) {
+      // Clear portal password, but DO NOT log out of Academia
+      localStorage.removeItem('portal_password');
+      // The tabs will show the manual login form
+    } else if (lowerError.includes('temporarily locked')) {
+      setTimeout(() => {
+        setPortalError(null);
+        syncPortalTabs(true);
+      }, 6 * 60 * 1000); // 6 minutes
+    }
+  };
+
+  // ==========================================
+  // SYNC PORTAL TABS
+  // ==========================================
+
+  const syncPortalTabs = async (
+    forceSync: boolean = false
+  ) => {
+    const savedCreds =
+      JSON.stringify({ username: sessionUsername });
+
+    const portalPwd = undefined;
+
+    if (!savedCreds) {
+      return;
+    }
+
+    const { username } =
+      JSON.parse(savedCreds);
+
+    await Promise.allSettled([
+
+      // ATTENDANCE
+
+      (async () => {
+        try {
+          const attRes = await fetch(
+            'http://localhost:5000/api/attendance/login',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type':
+                  'application/json'
+              },
+              body: JSON.stringify({
+                username,
+                password: portalPwd,
+                forceSync
+              })
+            }
+          );
+
+          const attData =
+            await attRes.json();
+
+          if (attData.success) {
+            const attendance =
+              Array.isArray(
+                attData.attendance
+              )
+                ? attData.attendance
+                : [];
+
+            setAttendanceData(
+              attendance
+            );
+
+            localStorage.setItem(
+              'academia_attendance',
+              JSON.stringify(attendance)
+            );
+
+            localStorage.setItem(
+              'academia_attendance_user',
+              username
+            );
+            setPortalError(null);
+          } else if (attData.error) {
+             handlePortalError(attData.error);
+          }
+        } catch (e) {
+          // Ignore attendance sync error
+        }
+      })(),
+
+      // GRADES
+
+      (async () => {
+        try {
+          const gradeRes =
+            await fetch(
+              'http://localhost:5000/api/grades/login',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type':
+                    'application/json'
+                },
+                body: JSON.stringify({
+                  username,
+                  password: portalPwd,
+                  forceSync
+                })
+              }
+            );
+
+          const gradeData =
+            await gradeRes.json();
+
+          if (gradeData.success) {
+            const semesters =
+              Array.isArray(
+                gradeData.semesters
+              )
+                ? gradeData.semesters
+                : [];
+
+            setGradesData(
+              semesters
+            );
+
+            setCgpa(
+              gradeData.cgpa || null
+            );
+
+            localStorage.setItem(
+              'academia_grades',
+              JSON.stringify(semesters)
+            );
+            localStorage.setItem(
+              'academia_cgpa',
+              String(gradeData.cgpa || '')
+            );
+            localStorage.setItem(
+              'academia_grades_user',
+              username
+            );
+          } else if (gradeData.error && !portalError) { // avoid overwriting the error if attendance already set it
+             handlePortalError(gradeData.error);
+          }
+        } catch (e) {
+          // Ignore grade sync error
+        }
+      })(),
+
+      // FEES
+
+      (async () => {
+        try {
+          const feeRes =
+            await fetch(
+              'http://localhost:5000/api/fees/login',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type':
+                    'application/json'
+                },
+                body: JSON.stringify({
+                  username,
+                  password: portalPwd,
+                  forceSync
+                })
+              }
+            );
+
+          const nextFeeData =
+            await feeRes.json();
+
+          if (nextFeeData.success) {
+            setFeeData(
+              nextFeeData
+            );
+
+            localStorage.setItem(
+              'academia_fees',
+              JSON.stringify(nextFeeData)
+            );
+
+            localStorage.setItem(
+              'academia_fees_user',
+              username
+            );
+          } else if (nextFeeData.error && !portalError) {
+             handlePortalError(nextFeeData.error);
+          }
+        } catch (e) {
+          // Ignore fees sync error
+        }
+      })(),
+
+      // CALENDAR
+
+      (async () => {
+        try {
+          const calRes =
+            await fetch(
+              'http://localhost:5000/api/calendar/login',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type':
+                    'application/json'
+                },
+                body: JSON.stringify({
+                  username,
+                  password: portalPwd,
+                  forceSync
+                })
+              }
+            );
+
+          const calData =
+            await calRes.json();
+
+          if (calData.success) {
+            setCalendarData(
+              calData
+            );
+
+            localStorage.setItem(
+              'academia_calendar',
+              JSON.stringify(calData)
+            );
+
+            localStorage.setItem(
+              'academia_calendar_user',
+              username
+            );
+          } else if (calData.error && !portalError) {
+             handlePortalError(calData.error);
+          }
+        } catch (e) {
+          // Ignore calendar sync error
+        }
+      })(),
+
+      // INTERNAL MARKS
+
+      (async () => {
+        try {
+          const internalRes = await fetch('http://localhost:5000/api/internal-marks/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password: portalPwd, forceSync })
+          });
+
+          const internalData = await internalRes.json();
+          if (internalData.success) {
+            const marks = Array.isArray(internalData.marks) ? internalData.marks : [];
+            setInternalMarksData(marks);
+            localStorage.setItem('academia_internalmarks', JSON.stringify(marks));
+            localStorage.setItem('academia_internalmarks_user', username);
+          } else if (internalData.error && !portalError) {
+             handlePortalError(internalData.error);
+          }
+        } catch (e) {
+          // Ignore internal marks error
+        }
+      })()
+    ]);
+  };
+
+  // ==========================================
+  // BACKGROUND SYNC
+  // ==========================================
 
   const handleBackgroundSync = async () => {
-    const savedCreds = localStorage.getItem('academia_credentials');
+    const savedCreds =
+      JSON.stringify({ username: sessionUsername });
+
     if (!savedCreds) {
       setIsBackgroundSyncing(false);
       return;
     }
-    
+
     try {
       setIsBackgroundSyncing(true);
-      const { username, password } = JSON.parse(savedCreds);
-      const response = await fetch('http://localhost:5000/api/academia/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const result = await response.json();
+
+      const {
+        username,
+        password
+      } = JSON.parse(savedCreds);
+
+      const response =
+        await fetch(
+          'http://localhost:5000/api/academia/login',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+            body: JSON.stringify({
+              username,
+              password
+            })
+          }
+        );
+
+      const result =
+        await response.json();
+
       if (result.success) {
         setData(result);
-        localStorage.setItem('academia_data', JSON.stringify(result));
+
+        localStorage.setItem(
+          'academia_data',
+          JSON.stringify(result)
+        );
+
+        if (result.pending) {
+          setIsPendingScrape(true);
+        }
+
         setSyncError(null);
       } else {
-        setSyncError(result.error || 'Failed to sync data.');
-        return; // Don't proceed to sync portal data if main login failed
+        setSyncError(
+          result.error ||
+          'Failed to sync data.'
+        );
       }
 
-      // 2. Fetch Portal Password
-      let portalPwd = localStorage.getItem('portal_password');
+      const portalPwd = undefined;
 
-      // 3. Sequentially sync Portal Data (Attendance, Grades, Fees, Calendar) ONLY if portal password is known
-      if (portalPwd) {
-        // Attendance
-      try {
-        const attRes = await fetch('http://localhost:5000/api/attendance/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password: portalPwd })
-        });
-        const attData = await attRes.json();
-        if (attData.success) {
-          setAttendanceData(attData.attendance);
-          localStorage.setItem('academia_attendance', JSON.stringify(attData.attendance));
-          localStorage.setItem('academia_attendance_user', username);
-          localStorage.setItem('portal_password', portalPwd);
-        }
-      } catch (e) { console.error('Bg sync attendance failed', e); }
+      if (true) {
+        await Promise.allSettled([
 
-      // Grades
-      try {
-        const gradeRes = await fetch('http://localhost:5000/api/grades/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password: portalPwd })
-        });
-        const gradeData = await gradeRes.json();
-        if (gradeData.success) {
-          setGradesData(gradeData.semesters);
-          setCgpa(gradeData.cgpa);
-          localStorage.setItem('academia_grades', JSON.stringify(gradeData.semesters));
-          if (gradeData.cgpa) localStorage.setItem('academia_cgpa', gradeData.cgpa);
-        }
-      } catch (e) { console.error('Bg sync grades failed', e); }
+          // ATTENDANCE
 
-      // Fees
-      try {
-        const feeRes = await fetch('http://localhost:5000/api/fee/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password: portalPwd })
-        });
-        const feeData = await feeRes.json();
-        if (feeData.success) {
-          setFeeData(feeData.feeData);
-          localStorage.setItem('academia_fees', JSON.stringify(feeData.feeData));
-        }
-      } catch (e) { console.error('Bg sync fees failed', e); }
+          (async () => {
+            try {
+              const attRes =
+                await fetch(
+                  'http://localhost:5000/api/attendance/login',
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type':
+                        'application/json'
+                    },
+                    body: JSON.stringify({
+                      username,
+                      password: portalPwd
+                    })
+                  }
+                );
 
-      // Calendar
-      try {
-        const calRes = await fetch('http://localhost:5000/api/calendar/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password: portalPwd })
-        });
-        const calData = await calRes.json();
-        if (calData.success) {
-          setCalendarData(calData.calendar);
-          // Calendar isn't cached in localStorage currently, but setting state makes it instant
-        }
-      } catch (e) { console.error('Bg sync calendar failed', e); }
+              const attData =
+                await attRes.json();
+
+              if (attData.success) {
+                const attendance =
+                  Array.isArray(
+                    attData.attendance
+                  )
+                    ? attData.attendance
+                    : [];
+
+                setAttendanceData(
+                  attendance
+                );
+
+                localStorage.setItem(
+                  'academia_attendance',
+                  JSON.stringify(attendance)
+                );
+
+                localStorage.setItem(
+                  'academia_attendance_user',
+                  username
+                );
+              }
+            } catch (e) {
+              // Ignore attendance error
+            }
+          })(),
+
+          // GRADES
+
+          (async () => {
+            try {
+              const gradeRes =
+                await fetch(
+                  'http://localhost:5000/api/grades/login',
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type':
+                        'application/json'
+                    },
+                    body: JSON.stringify({
+                      username,
+                      password: portalPwd
+                    })
+                  }
+                );
+
+              const gradeData =
+                await gradeRes.json();
+
+              if (gradeData.success) {
+                const semesters =
+                  Array.isArray(
+                    gradeData.semesters
+                  )
+                    ? gradeData.semesters
+                    : [];
+
+                setGradesData(
+                  semesters
+                );
+
+                setCgpa(
+                  gradeData.cgpa || ''
+                );
+
+                localStorage.setItem(
+                  'academia_grades',
+                  JSON.stringify(semesters)
+                );
+
+                localStorage.setItem(
+                  'academia_grades_user',
+                  username
+                );
+
+                if (gradeData.cgpa) {
+                  localStorage.setItem(
+                    'academia_cgpa',
+                    gradeData.cgpa
+                  );
+                }
+              }
+            } catch (e) {
+              // Ignore grades error
+            }
+          })(),
+
+          // FEES
+
+          (async () => {
+            try {
+              const feeRes =
+                await fetch(
+                  'http://localhost:5000/api/fees/login',
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type':
+                        'application/json'
+                    },
+                    body: JSON.stringify({
+                      username,
+                      password: portalPwd
+                    })
+                  }
+                );
+
+              const nextFeeData =
+                await feeRes.json();
+
+              if (nextFeeData.success) {
+                setFeeData(
+                  nextFeeData
+                );
+
+                localStorage.setItem(
+                  'academia_fees',
+                  JSON.stringify(nextFeeData)
+                );
+
+                localStorage.setItem(
+                  'academia_fees_user',
+                  username
+                );
+              }
+            } catch (e) {
+              // Ignore fees error
+            }
+          })(),
+
+          // CALENDAR
+
+          (async () => {
+            try {
+              const calRes =
+                await fetch(
+                  'http://localhost:5000/api/calendar/login',
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type':
+                        'application/json'
+                    },
+                    body: JSON.stringify({
+                      username,
+                      password: portalPwd
+                    })
+                  }
+                );
+
+              const calData =
+                await calRes.json();
+
+              if (calData.success) {
+                setCalendarData(
+                  calData
+                );
+
+                localStorage.setItem(
+                  'academia_calendar',
+                  JSON.stringify(calData)
+                );
+
+                localStorage.setItem(
+                  'academia_calendar_user',
+                  username
+                );
+              }
+            } catch (e) {
+              // Ignore calendar error
+            }
+          })(),
+
+          // INTERNAL MARKS
+
+          (async () => {
+            try {
+              const internalRes = await fetch('http://localhost:5000/api/internal-marks/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password: portalPwd })
+              });
+
+              const internalData = await internalRes.json();
+              if (internalData.success) {
+                const marks = Array.isArray(internalData.marks) ? internalData.marks : [];
+                setInternalMarksData(marks);
+                localStorage.setItem('academia_internalmarks', JSON.stringify(marks));
+                localStorage.setItem('academia_internalmarks_user', username);
+              }
+            } catch (e) {
+              // Ignore
+            }
+          })()
+        ]);
       }
-
     } catch (err: any) {
-      console.error('Background sync failed:', err);
-      setSyncError(`Network or server error: ${err.message || 'Check console'}`);
+      setSyncError(
+        `Network or server error: ${err.message || 'Check console'
+        }`
+      );
     } finally {
       setIsBackgroundSyncing(false);
     }
   };
 
+  // ==========================================
+  // LOGOUT
+  // ==========================================
+
   const handleLogout = () => {
-    localStorage.removeItem('academia_credentials');
-    localStorage.removeItem('academia_data');
-    localStorage.removeItem('academia_attendance');
-    localStorage.removeItem('academia_grades');
-    localStorage.removeItem('academia_sgpa');
-    localStorage.removeItem('portal_password');
+    localStorage.removeItem(
+      'session_token'
+    );
+
+    localStorage.removeItem(
+      'academia_credentials'
+    );
+
+    localStorage.removeItem(
+      'academia_data'
+    );
+
+    localStorage.removeItem(
+      'academia_attendance'
+    );
+
+    localStorage.removeItem(
+      'academia_attendance_user'
+    );
+
+    localStorage.removeItem(
+      'academia_grades'
+    );
+
+    localStorage.removeItem(
+      'academia_grades_user'
+    );
+
+    localStorage.removeItem(
+      'academia_cgpa'
+    );
+
+    localStorage.removeItem(
+      'academia_fees'
+    );
+
+    localStorage.removeItem(
+      'academia_fees_user'
+    );
+
+    localStorage.removeItem(
+      'academia_calendar'
+    );
+
+    localStorage.removeItem(
+      'academia_calendar_user'
+    );
+
+    localStorage.removeItem(
+      'portal_password'
+    );
+
+    localStorage.removeItem(
+      'dashboard_active_tab'
+    );
+
     navigate('/');
   };
 
-  const handleRefresh = async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    try {
-      const savedCreds = localStorage.getItem('academia_credentials');
-      if (savedCreds) {
-        const { username, password } = JSON.parse(savedCreds);
-        const response = await fetch('http://localhost:5000/api/academia/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-        const result = await response.json();
-        if (result.success) {
-          setData(result);
-          localStorage.setItem('academia_data', JSON.stringify(result));
-        } else {
-          alert('Failed to refresh data: ' + result.message);
-        }
-      } else {
-        navigate('/');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Error refreshing data');
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
-  if (!data) {
-    // If still syncing show the skeleton inside the proper dashboard layout
-    if (isBackgroundSyncing || isPendingScrape || refreshing) {
-      return (
-        <div className="dashboard-container">
-          <aside className="sidebar">
-            <div className="brand-logo sidebar-logo">
-              <div className="logo-mark"></div>
-              <span>BrainMint</span>
-            </div>
-            {/* Ghost nav items */}
-            <nav className="sidebar-nav">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} style={{ margin: '0.4rem 1rem', height: '40px', borderRadius: '8px' }} className="pulse"></div>
-              ))}
-            </nav>
-          </aside>
-          <main className="main-content">
-            <SkeletonLoader type="profile" />
-          </main>
-        </div>
-      );
-    }
-    
-    // Not syncing and no data — show error/empty state
+
+  // ==========================================
+  // BACKGROUND VIDEO (shared across all render branches)
+  // ==========================================
+
+
+  // ==========================================
+  // LOADING / EMPTY STATE
+  // ==========================================
+
+  // Global empty state if NO data exists and NO sync is happening
+  const isGlobalLoading = !data && (isBackgroundSyncing || isPendingScrape);
+  const isCompletelyEmpty = !data && !attendanceData && !gradesData && !isGlobalLoading;
+
+  if (isGlobalLoading) {
+    return <SplashScreen theme={theme} />;
+  }
+
+  if (isCompletelyEmpty) {
     return (
       <div className="dashboard-container">
-        <aside className="sidebar">
-          <div className="brand-logo sidebar-logo">
-            <div className="logo-mark"></div>
-            <span>BrainMint</span>
-          </div>
-        </aside>
-        <main className="main-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <BackgroundVideo theme={theme} />
+
+        <Sidebar
+          isMinimal={true}
+          handleLogout={handleLogout}
+        />
+
+        <main
+          className="main-content"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
           <div className="empty-state">
-            <p>{syncError || 'No academic data found. Please log in again.'}</p>
-            <button onClick={handleLogout} className="primary-btn">Go to Login</button>
+
+            <p>
+              {syncError ||
+                'No academic data found. Please log in again.'}
+            </p>
+
+            <button
+              onClick={handleLogout}
+              className="primary-btn"
+            >
+              Go to Login
+            </button>
+
           </div>
         </main>
+
       </div>
     );
   }
 
+  // ==========================================
+  // OVERALL ATTENDANCE CALCULATION
+  // ==========================================
+
+  const attendanceRows =
+    Array.isArray(attendanceData)
+      ? attendanceData
+      : [];
+
+  const totalAttended =
+    attendanceRows.reduce(
+      (
+        sum: number,
+        subject: any
+      ) => {
+        const attended =
+          Number(
+            subject?.attended ?? 0
+          );
+
+        return (
+          sum +
+          (
+            Number.isFinite(attended)
+              ? attended
+              : 0
+          )
+        );
+      },
+      0
+    );
+
+  const totalClasses =
+    attendanceRows.reduce(
+      (
+        sum: number,
+        subject: any
+      ) => {
+        const total =
+          Number(
+            subject?.maxHours ?? 0
+          );
+
+        return (
+          sum +
+          (
+            Number.isFinite(total)
+              ? total
+              : 0
+          )
+        );
+      },
+      0
+    );
+
+  const attendancePercent =
+    totalClasses > 0
+      ? (
+        totalAttended /
+        totalClasses
+      ) * 100
+      : undefined;
+
+  // ==========================================
+  // MAIN UI
+  // ==========================================
 
   return (
     <div className="dashboard-container">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div className="brand-logo sidebar-logo">
-          <div className="logo-mark"></div>
-          <span>BrainMint</span>
-        </div>
-        
-        <nav className="sidebar-nav">
-          <button 
-            className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
-            onClick={() => setActiveTab('profile')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            Student Profile
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'courses' ? 'active' : ''}`}
-            onClick={() => setActiveTab('courses')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-            </svg>
-            Course Page
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'timetable' ? 'active' : ''}`}
-            onClick={() => setActiveTab('timetable')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
-            My Time Table
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'attendance' ? 'active' : ''}`}
-            onClick={() => setActiveTab('attendance')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            Attendance
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'internal-marks' ? 'active' : ''}`}
-            onClick={() => setActiveTab('internal-marks')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="12" y1="18" x2="12" y2="12"></line>
-              <line x1="9" y1="15" x2="15" y2="15"></line>
-            </svg>
-            Internal Marks
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'marks' ? 'active' : ''}`}
-            onClick={() => setActiveTab('marks')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-              <path d="M2 17l10 5 10-5"></path>
-              <path d="M2 12l10 5 10-5"></path>
-            </svg>
-            Grade and Credit
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'fees' ? 'active' : ''}`}
-            onClick={() => setActiveTab('fees')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-              <line x1="12" y1="22.08" x2="12" y2="12"></line>
-            </svg>
-            Fees structure
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'calendar' ? 'active' : ''}`}
-            onClick={() => setActiveTab('calendar')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="21" y2="10"></line>
-              <line x1="9" y1="14" x2="15" y2="14"></line>
-            </svg>
-            Academic Calendar
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'calculator' ? 'active' : ''}`}
-            onClick={() => setActiveTab('calculator')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
-              <line x1="8" y1="6" x2="16" y2="6"></line>
-              <line x1="16" y1="14" x2="16" y2="14"></line>
-              <line x1="16" y1="10" x2="16" y2="10"></line>
-              <line x1="16" y1="18" x2="16" y2="18"></line>
-              <line x1="12" y1="14" x2="12" y2="14"></line>
-              <line x1="12" y1="10" x2="12" y2="10"></line>
-              <line x1="12" y1="18" x2="12" y2="18"></line>
-              <line x1="8" y1="14" x2="8" y2="14"></line>
-              <line x1="8" y1="10" x2="8" y2="10"></line>
-              <line x1="8" y1="18" x2="8" y2="18"></line>
-            </svg>
-            GPA Calculator
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'faculty-finder' ? 'active' : ''}`}
-            onClick={() => setActiveTab('faculty-finder')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="8.5" cy="7" r="4"></circle>
-              <circle cx="18" cy="11" r="3"></circle>
-              <line x1="20" y1="13" x2="22" y2="15"></line>
-            </svg>
-            Faculty Finder
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'mess' ? 'active' : ''}`}
-            onClick={() => setActiveTab('mess')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-              <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-              <line x1="6" y1="1" x2="6" y2="4"/>
-              <line x1="10" y1="1" x2="10" y2="4"/>
-              <line x1="14" y1="1" x2="14" y2="4"/>
-            </svg>
-            Mess Menu
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'study' ? 'active' : ''}`}
-            onClick={() => setActiveTab('study')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-            </svg>
-            Study Material
-          </button>
-        </nav>
-        
-        <div className="sidebar-footer">
-          
-          <button onClick={handleLogout} className="logout-btn sidebar-logout">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-            Log out
-          </button>
-        </div>
-      </aside>
 
-      {/* Main Content */}
+      <BackgroundVideo theme={theme} />
+
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        handleLogout={handleLogout}
+      />
+
       <main className="main-content">
-        <header className="top-header">
-          <div className="welcome-text">
-            <h1>{activeTab === 'profile' ? 'Student Profile' : activeTab === 'courses' ? 'Course Page' : activeTab === 'attendance' ? 'Attendance' : activeTab === 'internal-marks' ? 'Internal Marks' : activeTab === 'marks' ? 'Grade and Credit' : activeTab === 'fees' ? 'Fees structure' : activeTab === 'calculator' ? 'GPA Calculator' : activeTab === 'faculty-finder' ? 'Faculty Finder' : activeTab === 'mess' ? 'Mess Menu' : activeTab === 'study' ? 'Study Material' : activeTab === 'sem1' ? 'Semester 1 Resources' : 'My Time Table'}</h1>
-            <p className="subtitle">Welcome back, {data?.profile?.name || data?.username || 'Student'}</p>
-          </div>
-          {activeTab !== 'calculator' && activeTab !== 'internal-marks' && activeTab !== 'faculty-finder' && activeTab !== 'mess' && activeTab !== 'study' && activeTab !== 'sem1' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              {isBackgroundSyncing && (
-                <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div className="spinner" style={{ width: '12px', height: '12px', borderTopColor: '#10b981' }}></div> 
-                  Syncing in background...
-                </span>
-              )}
-              <button 
-                className={`refresh-btn ${refreshing || isBackgroundSyncing ? 'spinning' : ''}`} 
-                onClick={handleRefresh}
-                disabled={refreshing || isBackgroundSyncing}
-              >
-                {refreshing || isBackgroundSyncing ? 'Syncing...' : 'Sync Now'}
-              </button>
-            </div>
-          )}
-        </header>
-        
+
+        <TopBar
+          activeTab={activeTab}
+          userName={
+            data?.profile?.name ||
+            data?.username ||
+            'Student'
+          }
+          isBackgroundSyncing={
+            isBackgroundSyncing
+          }
+        />
+
+
         <div className="content-area">
-          {activeTab === 'profile' ? (
-            <div className="profile-section">
-              <div className="profile-card">
-                <div className="profile-avatar">
-                  <span>{data?.profile?.name?.charAt(0).toUpperCase() || data?.username?.charAt(0).toUpperCase() || 'S'}</span>
-                </div>
-                <div className="profile-info">
-                  <h2>{data?.profile?.name || data?.username}</h2>
-                  <p className="profile-email">{data?.profile?.registrationNumber || data?.username}</p>
-                  
-                  <div className="profile-details-grid">
-                    {data.profile && (
-                      <>
-                        <div className="detail-item">
-                          <span className="detail-label">Program</span>
-                          <span className="detail-value">{data.profile.program}</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="detail-label">Department</span>
-                          <span className="detail-value">{data.profile.department}</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="detail-label">Semester</span>
-                          <span className="detail-value">{data.profile.semester} (Batch {data.profile.batch})</span>
-                        </div>
-                      </>
-                    )}
-                    <div className="detail-item">
-                      <span className="detail-label">Status</span>
-                      <span className="detail-value success">Active Student</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Platform</span>
-                      <span className="detail-value">SRM Academia</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Last Synced</span>
-                      <span className="detail-value">
-                        {data?.scrapedAt ? new Date(data.scrapedAt).toLocaleString() : 'Just now'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : activeTab === 'courses' ? (
-            <div className="data-grid full-width">
-              <section className="data-card">
-                <h2>Time Table Courses</h2>
-                {data.courses && data.courses.length > 0 ? (
-                  <ul className="course-list">
-                    {data.courses.map((course: any, index: number) => (
-                      <li key={index} className="course-item detailed-course">
-                        <div className="course-main-info">
-                          <span className="course-code">{course.code}</span>
-                          <div className="course-title-row">
-                            <span className="course-name">{course.title}</span>
-                            {course.type && <span className="course-type-badge">{course.type}</span>}
-                          </div>
-                        </div>
-                        <div className="course-stats-group extended-stats">
-                          <div className="stat-pill"><span className="stat-label">Faculty:</span> {course.faculty || 'N/A'}</div>
-                          <div className="stat-pill"><span className="stat-label">Slot:</span> {course.slot || 'N/A'}</div>
-                          <div className="stat-pill"><span className="stat-label">Room:</span> {course.room || 'N/A'}</div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="no-data">
-                    <p>No enrolled courses found.</p>
+
+          {activeTab === 'attendance' && portalError && (
+            <div className="portal-alert-card premium-alert">
+              <svg className="portal-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <div className="portal-alert-content">
+                <span className="portal-alert-title">Student Portal Alert</span>
+                <p className="portal-alert-message">{portalError}</p>
+                {portalError.toLowerCase().includes('temporarily locked') && (
+                  <div className="portal-alert-subtext">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    The system will automatically try again in 6 minutes.
                   </div>
                 )}
-              </section>
-            </div>
-          ) : activeTab === 'timetable' ? (
-            <div className="timetable-container full-width">
-              <section className="data-card timetable-card">
-                <h2>My Unified Time Table</h2>
-                {data.timetableGrid && Object.keys(data.timetableGrid).length > 0 ? (
-                  <div className="table-responsive">
-                    <table className="timetable-matrix">
-                      <thead>
-                        <tr>
-                          <th>Day / Time</th>
-                          {data.timetableGrid[Object.keys(data.timetableGrid)[0]].map((cell: any, idx: number) => (
-                            <th key={idx}>{cell.time}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(data.timetableGrid).map(([day, cells]: [string, any]) => (
-                          <tr key={day}>
-                            <td className="day-label"><strong>{day}</strong></td>
-                            {cells.map((cell: any, idx: number) => {
-                              const baseSlot = cell.slot ? cell.slot.split('/')[0].trim() : '';
-                              const matchedCourse = baseSlot ? data.courses?.find((c: any) => c.slot && c.slot.split('-').some((s: string) => s.trim() === baseSlot)) : null;
-                              
-                              return (
-                                <td key={idx} className={`slot-cell ${matchedCourse ? 'has-course' : 'free-slot'}`}>
-                                  {matchedCourse ? (
-                                    <div className="course-block">
-                                      <div className="course-code-small" title={matchedCourse.code}>{matchedCourse.title}</div>
-                                      <div className="course-room-small">{matchedCourse.room}</div>
-                                      <div className="slot-badge">{cell.slot}</div>
-                                    </div>
-                                  ) : (
-                                    <div className="free-block">
-                                      {cell.slot ? cell.slot : '-'}
-                                    </div>
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="empty-state">
-                    <p>No timetable grid found. Please try syncing again.</p>
-                  </div>
-                )}
-              </section>
-            </div>
-          ) : activeTab === 'attendance' ? (
-            <AttendanceTab 
-              attendanceData={attendanceData} 
-              setAttendanceData={setAttendanceData} 
-              savedUsername={data?.username} 
-            />
-          ) : activeTab === 'internal-marks' ? (
-            <div className="data-grid full-width" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1" style={{ marginBottom: '1rem' }}>
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                <h2 style={{ color: '#475569', fontSize: '1.5rem', marginBottom: '0.5rem' }}>Internal Marks Coming Soon!</h2>
-                <p style={{ color: '#64748b' }}>We are working on bringing your internal assessment marks here.</p>
               </div>
             </div>
-          ) : activeTab === 'faculty-finder' ? (
-            <FacultyFinderTab courses={data?.courses || []} />
-          ) : activeTab === 'mess' ? (
-            <MessTab />
-          ) : activeTab === 'study' ? (
-            <Study onSelectSemester={(sem) => {
-              if (sem === 1) setActiveTab('sem1');
-            }} />
-          ) : activeTab === 'sem1' ? (
-            <Sem1 onBack={() => setActiveTab('study')} />
-          ) : activeTab === 'marks' ? (
-            <MarksTab 
-              gradesData={gradesData} 
-              setGradesData={setGradesData}
-              cgpa={cgpa}
-              setCgpa={setCgpa}
-              savedUsername={data?.username}
-            />
-          ) : activeTab === 'fees' ? (
-            <FeeTab 
-              feeData={feeData}
-              setFeeData={setFeeData}
-              savedUsername={data?.username}
-            />
-          ) : null}
-          {activeTab === 'calendar' && (
-            <CalendarTab 
-              calendarData={calendarData} 
-              setCalendarData={setCalendarData} 
-              savedUsername={data?.username || ''} 
-            />
           )}
-          {activeTab === 'calculator' && (
-            <CalculatorTab />
+
+          {isGlobalLoading && ['profile', 'courses', 'timetable', 'faculty-finder'].includes(activeTab) ? (
+            <SkeletonLoader type="profile" />
+          ) : (
+            <>
+              {activeTab === 'profile' ? (
+                <StudentProfile
+                  data={data}
+                  cgpa={cgpa}
+                  attendancePercent={attendancePercent}
+                  totalAttended={totalAttended}
+                  totalClasses={totalClasses}
+                  todayDayOrder={todayDayOrder}
+                />
+              ) : activeTab === 'courses' ? (
+                <CoursePage courses={data?.courses} />
+              ) : activeTab === 'timetable' ? (
+                <TimetablePage
+                  timetableGrid={data?.timetableGrid}
+                  courses={data?.courses}
+                  todayDayOrder={todayDayOrder}
+                />
+              ) : activeTab === 'attendance' ? (
+                <AttendanceTab
+                  attendanceData={attendanceData}
+                  setAttendanceData={setAttendanceData}
+                  savedUsername={data?.username}
+                />
+              ) : activeTab === 'internal-marks' ? (
+                <InternalMarksTab
+                  internalMarksData={internalMarksData}
+                  setInternalMarksData={setInternalMarksData}
+                  savedUsername={data?.username}
+                />
+              ) : activeTab === 'faculty-finder' ? (
+                <ComingSoon featureName="Faculty Finder" />
+              ) : activeTab === 'mess' ? (
+                <ComingSoon featureName="Mess Menu" />
+              ) : activeTab === 'study' ? (
+                <Study onSelectSemester={(sem) => { if (sem === 1) setActiveTab('sem1'); }} />
+              ) : activeTab === 'sem1' ? (
+                <Sem1 onBack={() => setActiveTab('study')} />
+              ) : activeTab === 'marks' ? (
+                <MarksTab
+                  gradesData={gradesData}
+                  setGradesData={setGradesData}
+                  cgpa={cgpa}
+                  setCgpa={setCgpa}
+                  savedUsername={data?.username}
+                />
+              ) : activeTab === 'fees' ? (
+                <FeeTab feeData={feeData} setFeeData={setFeeData} savedUsername={data?.username} />
+              ) : null}
+
+              {activeTab === 'calendar' && (
+                <CalendarTab
+                  calendarData={calendarData}
+                  setCalendarData={setCalendarData}
+                  savedUsername={data?.username || ''}
+                />
+              )}
+
+              {activeTab === 'calculator' && (
+                <CalculatorTab />
+              )}
+            </>
           )}
+
         </div>
+
       </main>
+
     </div>
   );
+};
+
+
+const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const [sessionUsername, setSessionUsername] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('session_token');
+    if (!token) {
+      navigate('/');
+      return;
+    }
+    
+    fetch('http://localhost:5000/api/academia/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        setSessionUsername(data.username);
+      } else {
+        localStorage.removeItem('session_token');
+        navigate('/');
+      }
+    })
+    .catch(() => navigate('/'))
+    .finally(() => setIsInitializing(false));
+  }, [navigate]);
+
+  if (isInitializing || !sessionUsername) {
+    return <SplashScreen theme="dark" />;
+  }
+
+  return <DashboardInner sessionUsername={sessionUsername} />;
 };
 
 export default Dashboard;

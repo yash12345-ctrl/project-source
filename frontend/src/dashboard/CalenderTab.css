@@ -1,0 +1,887 @@
+@keyframes cal-fade-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes cal-modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* =========================================
+   TAB SHELL
+========================================= */
+
+.cal-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    width: 100%;
+    max-width: 920px;
+}
+
+.cal-tab-centered {
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+}
+
+/* =========================================
+   HEADER
+========================================= */
+
+.cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+
+    background: linear-gradient(180deg,
+            var(--ink-panel, #10141D) 0%,
+            var(--ink-bg, #0B0E14) 100%);
+
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+    border-radius: 16px;
+
+    padding: 1.5rem 2rem;
+
+    position: relative;
+    overflow: hidden;
+
+    flex-wrap: wrap;
+
+    animation: cal-fade-slide-in 0.4s ease both;
+}
+
+.cal-header::before {
+    content: '';
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+
+    background: linear-gradient(90deg,
+            transparent 0%,
+            var(--brass, #C9A227) 50%,
+            transparent 100%);
+
+    opacity: 0.5;
+}
+
+.cal-header-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.cal-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--brass, #C9A227);
+}
+
+.cal-title {
+    font-family: 'Newsreader', serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary, #F2EFE7);
+    margin: 0;
+}
+
+.cal-header-stats {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+
+    padding: 0 1.5rem;
+
+    border-left: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+    border-right: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+}
+
+.cal-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.cal-stat-value {
+    font-family: 'Newsreader', serif;
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.cal-stat-working {
+    color: var(--teal, #2DD4BF);
+}
+
+.cal-stat-holiday {
+    color: var(--danger, #E5675A);
+}
+
+.cal-stat-total {
+    color: var(--brass-soft, #E8C766);
+}
+
+.cal-stat-caption {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted, #757D8F);
+}
+
+.cal-sync-btn {
+    flex-shrink: 0;
+
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+    border-radius: 9px;
+
+    padding: 0.6rem 1.1rem;
+
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+
+    color: var(--text-primary, #F2EFE7);
+
+    cursor: pointer;
+
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.cal-sync-btn:hover {
+    border-color: var(--brass, #C9A227);
+    background: rgba(201, 162, 39, 0.06);
+}
+
+.cal-sync-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* =========================================
+   ERROR
+========================================= */
+
+.cal-error {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+
+    color: var(--danger, #E5675A);
+
+    background: rgba(229, 103, 90, 0.08);
+    border: 1px solid rgba(229, 103, 90, 0.2);
+    border-radius: 8px;
+
+    padding: 0.65rem 1rem;
+
+    margin: 0;
+}
+
+.cal-error-centered {
+    text-align: center;
+    margin-bottom: 1.25rem;
+}
+
+/* =========================================
+   MONTH TABS
+========================================= */
+
+.cal-month-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    animation: cal-fade-slide-in 0.4s ease both;
+}
+
+.cal-month-tab {
+    background: var(--ink-panel, #10141D);
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+    border-radius: 9px;
+
+    padding: 0.5rem 0.95rem;
+
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+
+    color: var(--text-muted, #757D8F);
+
+    cursor: pointer;
+
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.cal-month-tab:hover {
+    border-color: rgba(201, 162, 39, 0.35);
+    background: rgba(201, 162, 39, 0.05);
+}
+
+.cal-month-tab:active {
+    transform: translateY(1px);
+}
+
+.cal-month-tab.active {
+    background: rgba(201, 162, 39, 0.12);
+    border-color: var(--brass, #C9A227);
+    color: var(--text-primary, #F2EFE7);
+    box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.18), 0 6px 14px rgba(201, 162, 39, 0.12);
+}
+
+/* =========================================
+   GRID CARD
+========================================= */
+
+.cal-grid-card {
+    background: var(--ink-panel, #10141D);
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+    border-radius: 16px;
+
+    padding: 1.75rem;
+
+    animation: cal-fade-slide-in 0.25s ease both;
+}
+
+.cal-grid-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+
+    margin-bottom: 1.25rem;
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid var(--hairline, rgba(255, 255, 255, 0.06));
+}
+
+.cal-grid-title {
+    margin: 0;
+
+    font-family: 'Newsreader', serif;
+    font-size: 18px;
+    font-weight: 600;
+
+    color: var(--text-primary, #F2EFE7);
+}
+
+.cal-grid-mini-stats {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+
+    color: var(--text-muted, #757D8F);
+}
+
+.cal-grid-mini-stats span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* =========================================
+   WEEKDAY ROW
+========================================= */
+
+.cal-weekday-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+
+    margin-bottom: 8px;
+}
+
+.cal-weekday-label {
+    text-align: center;
+
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+
+    color: var(--text-muted, #757D8F);
+    opacity: 0.75;
+
+    padding-bottom: 4px;
+}
+
+/* =========================================
+   CALENDAR GRID
+========================================= */
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.cal-cell {
+    position: relative;
+
+    aspect-ratio: 1 / 0.85;
+
+    border-radius: 10px;
+
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.05));
+
+    background: rgba(255, 255, 255, 0.018);
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    padding: 8px 8px 7px 9px;
+
+    overflow: hidden;
+
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.cal-cell:not(.cal-cell-empty):hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
+}
+
+.cal-cell-empty {
+    background: transparent;
+    border-color: transparent;
+}
+
+/* Tone signal: a slim accent bar along the top edge, rather than a full
+   colour wash — keeps every cell legible while still scannable at a glance. */
+.cal-cell.tone-working::before,
+.cal-cell.tone-holiday::before,
+.cal-cell.tone-exam::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+}
+
+.cal-cell.tone-working::before {
+    background: var(--teal, #2DD4BF);
+}
+
+.cal-cell.tone-holiday::before {
+    background: var(--danger, #E5675A);
+}
+
+.cal-cell.tone-exam::before {
+    background: var(--brass, #C9A227);
+}
+
+.cal-cell-daynum {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+
+    color: var(--text-primary, #F2EFE7);
+}
+
+.cal-cell.tone-nodata .cal-cell-daynum {
+    color: var(--text-muted, #757D8F);
+    font-weight: 500;
+    opacity: 0.5;
+}
+
+.cal-cell.tone-working {
+    background: rgba(45, 212, 191, 0.05);
+}
+
+.cal-cell.tone-holiday {
+    background: rgba(229, 103, 90, 0.045);
+}
+
+.cal-cell.tone-exam {
+    background: rgba(201, 162, 39, 0.06);
+}
+
+.cal-cell-dayorder {
+    align-self: flex-end;
+
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+
+    color: var(--teal, #2DD4BF);
+
+    background: rgba(45, 212, 191, 0.14);
+    border-radius: 5px;
+
+    min-width: 16px;
+    text-align: center;
+
+    padding: 2px 5px;
+}
+
+.cal-cell-dot {
+    position: absolute;
+
+    bottom: 7px;
+    right: 8px;
+
+    width: 5px;
+    height: 5px;
+
+    border-radius: 50%;
+
+    background: var(--brass-soft, #E8C766);
+    box-shadow: 0 0 0 2px rgba(232, 199, 102, 0.18);
+}
+
+.cal-cell.is-today {
+    border-color: var(--brass, #C9A227);
+    box-shadow: 0 0 0 1px var(--brass, #C9A227) inset, 0 0 14px rgba(201, 162, 39, 0.25);
+}
+
+.cal-cell.is-today .cal-cell-daynum {
+    color: var(--brass-soft, #E8C766);
+}
+
+.cal-cell.is-today::after {
+    content: 'Today';
+    position: absolute;
+    bottom: 6px;
+    left: 9px;
+
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+
+    color: var(--brass-soft, #E8C766);
+    opacity: 0.85;
+}
+
+/* =========================================
+   LEGEND
+========================================= */
+
+.cal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.5rem;
+
+    margin-top: 1.4rem;
+    padding-top: 1.1rem;
+
+    border-top: 1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+}
+
+.cal-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+
+    color: var(--text-muted, #757D8F);
+}
+
+.dot {
+    width: 8px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.dot.tone-working {
+    background: var(--teal, #2DD4BF);
+}
+
+.dot.tone-holiday {
+    background: var(--danger, #E5675A);
+}
+
+.dot.tone-exam {
+    background: var(--brass, #C9A227);
+}
+
+.cal-legend-dayorder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 16px;
+    height: 16px;
+
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 700;
+
+    color: var(--teal, #2DD4BF);
+
+    background: rgba(45, 212, 191, 0.14);
+    border-radius: 4px;
+}
+
+/* =========================================
+   EMPTY STATE
+========================================= */
+
+.cal-empty-state {
+    text-align: center;
+    padding: 3.5rem 2rem;
+
+    background: var(--ink-panel, #10141D);
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+    border-radius: 16px;
+
+    color: var(--text-muted, #757D8F);
+
+    font-family: 'Inter', sans-serif;
+}
+
+.cal-empty-state p {
+    margin: 0 0 1.25rem 0;
+    font-size: 14px;
+}
+
+/* =========================================
+   LOGIN CARD
+========================================= */
+
+.cal-login-card {
+    width: 100%;
+    max-width: 420px;
+
+    background: linear-gradient(180deg,
+            var(--ink-panel, #10141D) 0%,
+            var(--ink-bg, #0B0E14) 100%);
+
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.07));
+    border-radius: 16px;
+
+    padding: 2.5rem 2.25rem;
+
+    position: relative;
+    overflow: hidden;
+
+    animation: cal-fade-slide-in 0.4s ease both;
+}
+
+.cal-login-card::before {
+    content: '';
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+
+    background: linear-gradient(90deg,
+            transparent 0%,
+            var(--brass, #C9A227) 50%,
+            transparent 100%);
+
+    opacity: 0.5;
+}
+
+.cal-login-eyebrow {
+    display: block;
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.cal-login-title {
+    margin: 0 0 0.75rem 0;
+
+    text-align: center;
+
+    font-family: 'Newsreader', serif;
+    font-size: 24px;
+    font-weight: 600;
+
+    color: var(--text-primary, #F2EFE7);
+}
+
+.cal-login-copy {
+    text-align: center;
+
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    line-height: 1.6;
+
+    color: var(--text-muted, #757D8F);
+
+    margin: 0 0 1.75rem 0;
+}
+
+.cal-loading-wrap {
+    text-align: center;
+    padding: 2rem 0;
+}
+
+/* =========================================
+   FORM ELEMENTS
+========================================= */
+
+.cal-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+
+    margin-bottom: 1.1rem;
+}
+
+.cal-input-group label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+
+    color: var(--text-muted, #757D8F);
+}
+
+.cal-login-input {
+    width: 100%;
+    box-sizing: border-box;
+
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.09));
+    border-radius: 9px;
+
+    padding: 0.75rem 0.9rem;
+
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+
+    color: var(--text-primary, #F2EFE7);
+
+    outline: none;
+
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.cal-login-input::placeholder {
+    color: var(--text-muted, #757D8F);
+    opacity: 0.6;
+}
+
+.cal-login-input:focus {
+    border-color: var(--brass, #C9A227);
+    background: rgba(201, 162, 39, 0.04);
+}
+
+.cal-login-input-disabled {
+    color: var(--text-muted, #757D8F);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.cal-primary-btn {
+    width: 100%;
+
+    background: linear-gradient(180deg, var(--brass-soft, #E8C766) 0%, var(--brass, #C9A227) 100%);
+    color: #14110A;
+
+    border: none;
+    border-radius: 9px;
+
+    padding: 0.8rem 1.5rem;
+
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+
+    cursor: pointer;
+
+    transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.cal-primary-btn:hover {
+    filter: brightness(1.08);
+}
+
+.cal-primary-btn:active {
+    transform: translateY(1px);
+}
+
+.cal-primary-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.cal-login-submit {
+    margin-top: 0.5rem;
+}
+
+/* =========================================
+   CAPTCHA MODAL
+========================================= */
+
+.cal-modal-overlay {
+    position: fixed;
+    inset: 0;
+
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(3px);
+
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 1.5rem;
+}
+
+.cal-modal {
+    width: 100%;
+    max-width: 400px;
+
+    background: linear-gradient(180deg,
+            var(--ink-panel, #10141D) 0%,
+            var(--ink-bg, #0B0E14) 100%);
+
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.09));
+    border-radius: 16px;
+
+    padding: 2rem;
+
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+
+    animation: cal-modal-in 0.25s ease both;
+}
+
+.cal-modal-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+
+    color: var(--brass, #C9A227);
+}
+
+.cal-modal-title {
+    margin: 0.4rem 0 0.75rem 0;
+
+    font-family: 'Newsreader', serif;
+    font-size: 21px;
+    font-weight: 600;
+
+    color: var(--text-primary, #F2EFE7);
+}
+
+.cal-modal-copy {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+
+    color: var(--text-muted, #757D8F);
+
+    margin: 0 0 1.25rem 0;
+}
+
+.cal-captcha-image {
+    text-align: center;
+
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+    border-radius: 10px;
+
+    padding: 1rem;
+
+    margin-bottom: 1.1rem;
+}
+
+.cal-captcha-image img {
+    max-width: 100%;
+    border-radius: 4px;
+}
+
+.cal-modal .cal-login-input {
+    margin-bottom: 1rem;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 720px) {
+
+    .cal-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1.5rem;
+    }
+
+    .cal-header-stats {
+        border-left: none;
+        border-right: none;
+        border-top: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+        border-bottom: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+
+        padding: 0.9rem 0;
+        width: 100%;
+
+        justify-content: space-around;
+    }
+
+    .cal-sync-btn {
+        align-self: stretch;
+        text-align: center;
+    }
+
+    .cal-grid-card {
+        padding: 1.1rem;
+    }
+
+    .cal-cell {
+        padding: 5px 6px;
+        border-radius: 8px;
+    }
+
+    .cal-cell-daynum {
+        font-size: 11px;
+    }
+
+    .cal-cell-dayorder {
+        font-size: 8.5px;
+    }
+
+    .cal-weekday-label {
+        font-size: 8.5px;
+    }
+
+    .cal-legend {
+        gap: 0.9rem;
+    }
+}

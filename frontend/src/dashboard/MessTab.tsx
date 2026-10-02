@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
 
 const hostels = [
   { id: 'premium', name: 'The Premium Boys - NRI Hostel', type: 'Boys' },
@@ -62,165 +63,388 @@ const menuData: Record<number, any[]> = {
   ]
 };
 
+// A meal's "hype" reads as a strong recommendation, a mild one, or neither —
+// map it to the same teal / muted language the rest of the app uses for
+// positive vs. neutral signal.
+const hypeTone = (hype: string): 'strong' | 'mild' | 'quiet' => {
+  if (hype === 'Crowd puller') return 'strong';
+  if (hype === 'Well liked' || hype === 'Balanced') return 'mild';
+  return 'quiet';
+};
+
 const MessTab: React.FC = () => {
   const [selectedHostel, setSelectedHostel] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
 
-  // Auto-detect today
   const today = new Date().getDay();
   const currentMenu = selectedHostel === 'premium' ? menuData[selectedDay] : null;
+  const selectedHostelData = hostels.find(h => h.id === selectedHostel);
+
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
 
   return (
-    <div className="tab-pane active fade-in">
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ color: '#0f172a', fontSize: '1.5rem', marginBottom: '0.5rem' }}>Select Your Hostel</h2>
-        <p style={{ color: '#64748b' }}>Choose your hostel to view the daily mess menu and food options.</p>
+    <div className="ms-scope">
+      <style>{`
+        .ms-scope {
+          --ink-panel: ${isLight ? '#ffffff' : '#10141D'};
+          --ink-bg: ${isLight ? '#f7f4f0' : '#0B0E14'};
+          --hairline: ${isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.07)'};
+          --brass: ${isLight ? '#9B7A1A' : '#C9A227'};
+          --brass-soft: ${isLight ? '#b89320' : '#E8C766'};
+          --brass-tint: ${isLight ? 'rgba(155, 122, 26, 0.12)' : 'rgba(201, 162, 39, 0.12)'};
+          --teal: ${isLight ? '#0d9488' : '#2DD4BF'};
+          --teal-tint: ${isLight ? 'rgba(13, 148, 136, 0.1)' : 'rgba(45, 212, 191, 0.12)'};
+          --danger: ${isLight ? '#C0392B' : '#E5675A'};
+          --text-primary: ${isLight ? '#1a1611' : '#F2EFE7'};
+          --text-muted: ${isLight ? '#6a6460' : '#757D8F'};
+          font-family: 'Inter', 'Source Sans 3', system-ui, sans-serif;
+          color: var(--text-primary);
+        }
+        .ms-scope * { box-sizing: border-box; }
+
+        .ms-intro { margin-bottom: 1.75rem; }
+        .ms-eyebrow {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 10.5px;
+          font-weight: 500;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          color: var(--brass);
+          display: block;
+          margin-bottom: 0.4rem;
+        }
+        .ms-intro h2 {
+          font-family: 'Newsreader', Georgia, serif;
+          font-size: 1.5rem;
+          font-weight: 600;
+          margin: 0 0 0.4rem 0;
+        }
+        .ms-intro p { margin: 0; color: var(--text-muted); font-size: 0.9rem; max-width: 52ch; }
+
+        .ms-hostel-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+          gap: 1.1rem;
+          margin-bottom: 2.25rem;
+        }
+
+        .ms-hostel-card {
+          position: relative;
+          text-align: left;
+          background: var(--ink-panel);
+          border: 1px solid var(--hairline);
+          border-left: 3px solid transparent;
+          border-radius: 12px;
+          padding: 1.25rem 1.35rem;
+          cursor: pointer;
+          transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+          font: inherit;
+          color: inherit;
+        }
+        .ms-hostel-card:hover { transform: translateY(-2px); border-color: rgba(201, 162, 39, 0.3); }
+        .ms-hostel-card.selected {
+          border-left-color: var(--brass);
+          border-color: var(--brass);
+          background: linear-gradient(180deg, rgba(201, 162, 39, 0.08) 0%, var(--ink-panel) 60%);
+        }
+        .ms-hostel-card:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+
+        .ms-hostel-tag {
+          display: inline-block;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 9.5px;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          color: var(--teal);
+          background: var(--teal-tint);
+          border-radius: 5px;
+          padding: 2px 6px;
+          margin-bottom: 0.6rem;
+        }
+        .ms-hostel-name {
+          margin: 0;
+          font-family: 'Newsreader', Georgia, serif;
+          font-size: 1.02rem;
+          font-weight: 600;
+          line-height: 1.35;
+          padding-right: 1.5rem;
+        }
+        .ms-hostel-check {
+          position: absolute;
+          top: 1.1rem;
+          right: 1.1rem;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: var(--brass);
+          color: #14110A;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .ms-panel {
+          background: var(--ink-panel);
+          border: 1px solid var(--hairline);
+          border-radius: 16px;
+          overflow: hidden;
+        }
+
+        .ms-panel-header {
+          padding: 1.4rem 1.75rem;
+          border-bottom: 1px solid var(--hairline);
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+        .ms-panel-header h3 {
+          margin: 0 0 0.3rem 0;
+          font-family: 'Newsreader', Georgia, serif;
+          font-size: 1.1rem;
+          font-weight: 600;
+        }
+        .ms-active-day {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.88rem;
+          color: var(--text-muted);
+        }
+        .ms-active-day strong { color: var(--brass-soft); font-weight: 600; }
+        .ms-today-pill {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 9.5px;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          color: var(--brass-soft);
+          background: var(--brass-tint);
+          border-radius: 99px;
+          padding: 2px 8px;
+        }
+
+        .ms-day-row {
+          display: flex;
+          gap: 0.3rem;
+          background: rgba(255,255,255,0.02);
+          border: 1px solid var(--hairline);
+          border-radius: 99px;
+          padding: 0.3rem;
+          overflow-x: auto;
+          max-width: 100%;
+        }
+        .ms-day-btn {
+          position: relative;
+          appearance: none;
+          border: none;
+          background: transparent;
+          color: var(--text-muted);
+          font-family: 'Inter', sans-serif;
+          font-size: 0.82rem;
+          font-weight: 600;
+          padding: 0.45rem 0.95rem;
+          border-radius: 99px;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .ms-day-btn:hover { color: var(--text-primary); }
+        .ms-day-btn.active {
+          background: var(--brass-tint);
+          color: var(--brass-soft);
+          box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.3);
+        }
+        .ms-day-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+        .ms-day-dot {
+          position: absolute;
+          top: 6px; right: 8px;
+          width: 5px; height: 5px;
+          border-radius: 50%;
+          background: var(--danger);
+        }
+
+        .ms-menu-area { padding: 1.75rem; background: var(--ink-bg); }
+
+        .ms-meal-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 1.25rem;
+        }
+
+        .ms-meal-card {
+          background: var(--ink-panel);
+          border: 1px solid var(--hairline);
+          border-radius: 12px;
+          padding: 1.35rem 1.45rem;
+        }
+        .ms-meal-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 1rem;
+          margin-bottom: 1.1rem;
+          padding-bottom: 1rem;
+          border-bottom: 1px solid var(--hairline);
+        }
+        .ms-meal-name {
+          margin: 0 0 0.3rem 0;
+          font-family: 'Newsreader', Georgia, serif;
+          font-size: 1.15rem;
+          font-weight: 600;
+        }
+        .ms-meal-time {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          color: var(--text-muted);
+          font-size: 0.8rem;
+        }
+        .ms-meal-time svg { flex-shrink: 0; }
+
+        .ms-meal-signal { display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; }
+        .ms-rating {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: var(--brass-soft);
+          background: var(--brass-tint);
+          border-radius: 6px;
+          padding: 3px 7px;
+        }
+        .ms-hype { font-size: 0.75rem; font-weight: 600; }
+        .ms-hype.tone-strong { color: var(--teal); }
+        .ms-hype.tone-mild { color: var(--text-muted); }
+        .ms-hype.tone-quiet { color: var(--text-muted); opacity: 0.65; }
+
+        .ms-items { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+        .ms-item-chip {
+          font-size: 0.8rem;
+          color: var(--text-primary);
+          background: rgba(255,255,255,0.03);
+          border: 1px solid var(--hairline);
+          border-radius: 99px;
+          padding: 0.32rem 0.75rem;
+        }
+
+        .ms-empty {
+          text-align: center;
+          padding: 3rem 1rem;
+        }
+        .ms-empty-icon {
+          width: 64px; height: 64px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid var(--hairline);
+          display: flex; align-items: center; justify-content: center;
+          margin: 0 auto 1.25rem auto;
+          color: var(--brass);
+          opacity: 0.85;
+        }
+        .ms-empty h3 {
+          margin: 0 0 0.4rem 0;
+          font-family: 'Newsreader', Georgia, serif;
+          font-size: 1.1rem;
+          color: var(--text-primary);
+        }
+        .ms-empty p { margin: 0; color: var(--text-muted); font-size: 0.88rem; max-width: 40ch; margin: 0 auto; }
+      `}</style>
+
+      <div className="ms-intro">
+        <span className="ms-eyebrow">Hostel Mess</span>
+        <h2>Select your hostel</h2>
+        <p>Choose your hostel to see the day's mess menu, meal timings, and how each meal tends to rate.</p>
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-        gap: '1.5rem',
-        marginBottom: '2rem'
-      }}>
-        {hostels.map(hostel => (
-          <div
-            key={hostel.id}
-            onClick={() => setSelectedHostel(hostel.id)}
-            style={{
-              backgroundColor: selectedHostel === hostel.id ? '#f0f9ff' : '#ffffff',
-              border: `2px solid ${selectedHostel === hostel.id ? '#0ea5e9' : '#e2e8f0'}`,
-              borderRadius: '12px',
-              padding: '1.5rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: selectedHostel === hostel.id ? '0 10px 15px -3px rgba(14, 165, 233, 0.1)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-              transform: selectedHostel === hostel.id ? 'translateY(-2px)' : 'none',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-            onMouseOver={(e) => {
-              if (selectedHostel !== hostel.id) {
-                e.currentTarget.style.borderColor = '#cbd5e1';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (selectedHostel !== hostel.id) {
-                e.currentTarget.style.borderColor = '#e2e8f0';
-                e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
-              }
-            }}
-          >
-            {selectedHostel === hostel.id && (
-              <div style={{
-                position: 'absolute',
-                top: '0',
-                right: '0',
-                backgroundColor: '#0ea5e9',
-                color: 'white',
-                padding: '0.25rem 0.75rem',
-                borderBottomLeftRadius: '12px',
-                fontSize: '0.75rem',
-                fontWeight: 'bold'
-              }}>
-                SELECTED
-              </div>
-            )}
-            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#f59e0b', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-              HOSTEL
-            </div>
-            <h3 style={{ margin: '0 0 0.5rem 0', color: '#1e293b', fontSize: '1.1rem' }}>{hostel.name}</h3>
-          </div>
-        ))}
+      <div className="ms-hostel-grid">
+        {hostels.map(hostel => {
+          const selected = selectedHostel === hostel.id;
+          return (
+            <button
+              key={hostel.id}
+              type="button"
+              onClick={() => setSelectedHostel(hostel.id)}
+              className={`ms-hostel-card ${selected ? 'selected' : ''}`}
+              aria-pressed={selected}
+            >
+              {selected && (
+                <span className="ms-hostel-check" aria-hidden="true">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </span>
+              )}
+              <span className="ms-hostel-tag">{hostel.type}</span>
+              <h3 className="ms-hostel-name">{hostel.name}</h3>
+            </button>
+          );
+        })}
       </div>
 
       {selectedHostel && (
-        <div className="fade-in" style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-          {/* Day Selector Header */}
-          <div style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <h3 style={{ margin: '0 0 0.25rem 0', color: '#0f172a', fontSize: '1.25rem' }}>Day Selector</h3>
-                <div style={{ color: '#64748b', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontWeight: '600', color: '#0ea5e9', fontSize: '1rem' }}>{days.find(d => d.id === selectedDay)?.full}</span>
-                  {selectedDay === today && (
-                    <span style={{ backgroundColor: '#fef3c7', color: '#d97706', padding: '0.1rem 0.5rem', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                      Today
-                    </span>
-                  )}
-                </div>
+        <div className="ms-panel">
+          <div className="ms-panel-header">
+            <div>
+              <h3>{selectedHostelData?.name}</h3>
+              <div className="ms-active-day">
+                <strong>{days.find(d => d.id === selectedDay)?.full}</strong>
+                {selectedDay === today && <span className="ms-today-pill">Today</span>}
               </div>
+            </div>
 
-              <div style={{ display: 'flex', overflowX: 'auto', gap: '0.25rem', backgroundColor: '#f1f5f9', padding: '0.35rem', borderRadius: '99px', maxWidth: '100%' }}>
-                {days.map(day => (
-                  <button
-                    key={day.id}
-                    onClick={() => setSelectedDay(day.id)}
-                    style={{
-                      padding: '0.5rem 1.25rem',
-                      borderRadius: '99px',
-                      border: 'none',
-                      backgroundColor: selectedDay === day.id ? '#ffffff' : 'transparent',
-                      color: selectedDay === day.id ? '#0ea5e9' : '#64748b',
-                      fontWeight: selectedDay === day.id ? '700' : '500',
-                      boxShadow: selectedDay === day.id ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      position: 'relative',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {day.label}
-                    {day.id === today && selectedDay !== day.id && (
-                      <div style={{ position: 'absolute', top: '6px', right: '6px', width: '6px', height: '6px', backgroundColor: '#ef4444', borderRadius: '50%' }} />
-                    )}
-                  </button>
-                ))}
-              </div>
+            <div className="ms-day-row" role="tablist">
+              {days.map(day => (
+                <button
+                  key={day.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selectedDay === day.id}
+                  onClick={() => setSelectedDay(day.id)}
+                  className={`ms-day-btn ${selectedDay === day.id ? 'active' : ''}`}
+                >
+                  {day.label}
+                  {day.id === today && selectedDay !== day.id && <span className="ms-day-dot" />}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Menu Content Area */}
-          <div style={{ padding: '2rem', backgroundColor: '#f8fafc' }}>
+          <div className="ms-menu-area">
             {currentMenu ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+              <div className="ms-meal-grid">
                 {currentMenu.map((meal, idx) => (
-                  <div key={idx} className="fade-in" style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '1.5rem', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <div key={idx} className="ms-meal-card">
+                    <div className="ms-meal-top">
                       <div>
-                        <h4 style={{ margin: '0 0 0.25rem 0', color: '#0f172a', fontSize: '1.25rem' }}>{meal.name}</h4>
-                        <div style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <h4 className="ms-meal-name">{meal.name}</h4>
+                        <div className="ms-meal-time">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                          </svg>
                           {meal.time}
                         </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                        <span style={{ backgroundColor: '#fef3c7', color: '#d97706', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                          ★ {meal.rating}
-                        </span>
-                        <span style={{ fontSize: '0.75rem', color: meal.hype.includes('Crowd') ? '#10b981' : '#64748b', marginTop: '0.25rem', fontWeight: '500' }}>
-                          {meal.hype}
-                        </span>
+                      <div className="ms-meal-signal">
+                        <span className="ms-rating">★ {meal.rating}</span>
+                        <span className={`ms-hype tone-${hypeTone(meal.hype)}`}>{meal.hype}</span>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div className="ms-items">
                       {meal.items.map((item: string, i: number) => (
-                        <span key={i} style={{ backgroundColor: '#f1f5f9', color: '#475569', padding: '0.35rem 0.75rem', borderRadius: '99px', fontSize: '0.85rem' }}>
-                          {item}
-                        </span>
+                        <span key={i} className="ms-item-chip">{item}</span>
                       ))}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '2rem 0' }}>
-                <div style={{ backgroundColor: '#ffffff', borderRadius: '50%', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', border: '1px solid #e2e8f0' }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <div className="ms-empty">
+                <div className="ms-empty-icon">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
                     <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
                     <line x1="6" y1="1" x2="6" y2="4" />
@@ -228,10 +452,8 @@ const MessTab: React.FC = () => {
                     <line x1="14" y1="1" x2="14" y2="4" />
                   </svg>
                 </div>
-                <h2 style={{ margin: '0 0 0.5rem', color: '#475569', fontSize: '1.25rem', fontWeight: '600' }}>Menu Not Available</h2>
-                <p style={{ color: '#94a3b8', maxWidth: '400px', fontSize: '0.9rem' }}>
-                  We don't have the menu data for {days.find(d => d.id === selectedDay)?.full} yet. Check back later!
-                </p>
+                <h3>Menu not available</h3>
+                <p>We don't have the menu for {days.find(d => d.id === selectedDay)?.full} at this hostel yet. Check back later.</p>
               </div>
             )}
           </div>

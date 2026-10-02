@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import './Dashboard.css';
+import { useTheme } from '../context/ThemeContext';
 
 const GRADE_POINTS: Record<string, number> = {
   'O': 10,
@@ -13,6 +14,23 @@ const GRADE_POINTS: Record<string, number> = {
   'I': 0
 };
 
+const GRADE_LABELS: Record<string, string> = {
+  'O': 'O — Outstanding',
+  'A+': 'A+ — Excellent',
+  'A': 'A — Very good',
+  'B+': 'B+ — Good',
+  'B': 'B — Above average',
+  'C': 'C — Average',
+  'F': 'F — Fail',
+  'Ab': 'Ab — Absent',
+  'I': 'I — Incomplete'
+};
+
+/**
+ * Visual identity: continues the "Faculty Register" dark academic theme —
+ * ink navy / transparent glass plates / brass accent — so the ledger
+ * reads like a printed mark-sheet rather than a generic form.
+ */
 const CalculatorTab: React.FC = () => {
   const [calcMode, setCalcMode] = useState<'sgpa' | 'cgpa'>('sgpa');
 
@@ -53,7 +71,7 @@ const CalculatorTab: React.FC = () => {
     setSemesters(semesters.filter(s => s.id !== id));
   };
 
-  const sgpaResult = useMemo(() => {
+  const sgpaTotals = useMemo(() => {
     let totalCredits = 0;
     let earnedPoints = 0;
     courses.forEach(c => {
@@ -62,10 +80,10 @@ const CalculatorTab: React.FC = () => {
       totalCredits += cr;
       earnedPoints += (cr * gp);
     });
-    return totalCredits > 0 ? (earnedPoints / totalCredits).toFixed(2) : '0.00';
+    return { totalCredits, result: totalCredits > 0 ? (earnedPoints / totalCredits).toFixed(2) : '0.00' };
   }, [courses]);
 
-  const cgpaResult = useMemo(() => {
+  const cgpaTotals = useMemo(() => {
     let totalCredits = 0;
     let totalSgpaPoints = 0;
     semesters.forEach(s => {
@@ -74,177 +92,356 @@ const CalculatorTab: React.FC = () => {
       totalCredits += cr;
       totalSgpaPoints += (cr * sgpa);
     });
-    return totalCredits > 0 ? (totalSgpaPoints / totalCredits).toFixed(2) : '0.00';
+    return { totalCredits, result: totalCredits > 0 ? (totalSgpaPoints / totalCredits).toFixed(2) : '0.00' };
   }, [semesters]);
 
-  return (
-    <div className="data-grid full-width">
-      <section className="data-card">
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' }}>
-          <button 
-            className={`primary-btn ${calcMode === 'sgpa' ? '' : 'outline'}`} 
-            style={calcMode !== 'sgpa' ? { background: 'transparent', color: '#3b82f6', border: '1px solid #3b82f6' } : {}}
-            onClick={() => setCalcMode('sgpa')}
-          >
-            SGPA Calculator
-          </button>
-          <button 
-            className={`primary-btn ${calcMode === 'cgpa' ? '' : 'outline'}`} 
-            style={calcMode !== 'cgpa' ? { background: 'transparent', color: '#3b82f6', border: '1px solid #3b82f6' } : {}}
-            onClick={() => setCalcMode('cgpa')}
-          >
-            CGPA Calculator
-          </button>
-        </div>
+  const sgpaResult = sgpaTotals.result;
+  const cgpaResult = cgpaTotals.result;
 
-        {calcMode === 'sgpa' ? (
-          <div>
-            <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>SGPA Calculator</h2>
-            <div className="table-responsive">
-              <table className="timetable-matrix" style={{ minWidth: '100%' }}>
-                <thead>
-                  <tr>
-                    <th style={{ width: '40%' }}>Course Name</th>
-                    <th style={{ width: '25%' }}>Credits</th>
-                    <th style={{ width: '25%' }}>Grade</th>
-                    <th style={{ width: '10%' }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {courses.map((course) => (
-                    <tr key={course.id}>
-                      <td>
-                        <input 
-                          type="text" 
-                          value={course.name} 
-                          onChange={(e) => updateCourse(course.id, 'name', e.target.value)}
-                          style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
-                        />
-                      </td>
-                      <td>
-                        <input 
-                          type="number" 
-                          min="1" 
-                          max="10"
-                          value={course.credits} 
-                          onChange={(e) => updateCourse(course.id, 'credits', e.target.value)}
-                          style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
-                        />
-                      </td>
-                      <td>
-                        <select 
-                          value={course.grade} 
-                          onChange={(e) => updateCourse(course.id, 'grade', e.target.value)}
-                          style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: 'white' }}
-                        >
-                          <option value="O">O (10)</option>
-                          <option value="A+">A+ (9)</option>
-                          <option value="A">A (8)</option>
-                          <option value="B+">B+ (7)</option>
-                          <option value="B">B (6)</option>
-                          <option value="C">C (5)</option>
-                          <option value="F">F (0)</option>
-                          <option value="Ab">Ab (0)</option>
-                          <option value="I">I (0)</option>
-                        </select>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button 
-                          onClick={() => removeCourse(course.id)}
-                          style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer' }}
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem' }}>
-              <button onClick={addCourse} className="primary-btn" style={{ background: '#10b981' }}>
-                + Add Course
-              </button>
-              
-              <div style={{ padding: '1rem 2rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Your SGPA</span>
-                <span style={{ fontSize: '2.5rem', fontWeight: '700', color: '#3b82f6' }}>{sgpaResult}</span>
-              </div>
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
+
+  return (
+    <div className="gc-scope">
+      <style>{`
+        .gc-scope {
+          --ink: ${isLight ? '#1a1611' : '#F3EFE3'};
+          --slate: ${isLight ? '#5a544c' : '#9AA0B4'};
+          --brass: ${isLight ? '#9B7A1A' : '#C9A227'};
+          --brass-deep: ${isLight ? '#b89320' : '#E8C468'};
+          --brass-tint: ${isLight ? 'rgba(155, 122, 26, 0.12)' : 'rgba(201, 162, 39, 0.14)'};
+          --line: ${isLight ? 'rgba(0, 0, 0, 0.12)' : 'rgba(201, 162, 39, 0.18)'};
+          --line-soft: ${isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'};
+          --plate: ${isLight ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.035)'};
+          --danger: ${isLight ? '#C0392B' : '#E27C6D'};
+          --danger-tint: ${isLight ? 'rgba(192, 57, 43, 0.1)' : 'rgba(226, 124, 109, 0.12)'};
+          --radius: 3px;
+          font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+          color: var(--ink);
+        }
+        .gc-scope * { box-sizing: border-box; }
+
+        .gc-tabs {
+          display: flex;
+          gap: 1.75rem;
+          margin-bottom: 1.75rem;
+        }
+        .gc-tab {
+          appearance: none;
+          background: none;
+          border: none;
+          padding: 0.4rem 0.05rem 0.65rem 0.05rem;
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: var(--slate);
+          cursor: pointer;
+          position: relative;
+        }
+        .gc-tab::after {
+          content: '';
+          position: absolute;
+          left: 0; right: 0; bottom: -1px;
+          height: 2px;
+          background: var(--brass);
+          transform: scaleX(0);
+          transform-origin: left;
+          transition: transform 0.2s ease;
+        }
+        .gc-tab.active { color: var(--ink); }
+        .gc-tab.active::after { transform: scaleX(1); }
+        .gc-tab:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+
+        .gc-panel {
+          background: var(--plate);
+          border: 1px solid var(--line-soft);
+          border-left: 3px solid var(--brass);
+          border-radius: var(--radius);
+          padding: 1.75rem clamp(1rem, 3vw, 2.25rem) 2.25rem;
+        }
+        .gc-panel h2 {
+          font-family: Georgia, 'Iowan Old Style', serif;
+          font-size: 1.35rem;
+          font-weight: 600;
+          margin: 0 0 0.25rem 0;
+        }
+        .gc-panel p.gc-sub {
+          margin: 0 0 1.75rem 0;
+          color: var(--slate);
+          font-size: 0.88rem;
+        }
+
+        .gc-ledger { width: 100%; border-collapse: collapse; }
+        .gc-ledger thead th {
+          text-align: left;
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: var(--slate);
+          padding: 0 0.6rem 0.6rem 0.6rem;
+          border-bottom: 1px solid var(--line);
+        }
+        .gc-ledger thead th:first-child { padding-left: 0; }
+        .gc-ledger tbody td {
+          padding: 0.65rem 0.6rem;
+          border-bottom: 1px solid var(--line-soft);
+          vertical-align: middle;
+        }
+        .gc-ledger tbody td:first-child { padding-left: 0; }
+        .gc-ledger tbody tr:hover { background: rgba(255,255,255,0.02); }
+        .gc-ledger tbody tr:last-child td { border-bottom: none; }
+
+        .gc-field {
+          width: 100%;
+          background: transparent;
+          border: none;
+          border-bottom: 1px solid var(--line);
+          color: var(--ink);
+          font-size: 0.92rem;
+          padding: 0.4rem 0.1rem;
+          outline: none;
+          font-family: inherit;
+          transition: border-color 0.15s ease;
+        }
+        .gc-field:focus { border-bottom-color: var(--brass); }
+        .gc-field[type="number"] { max-width: 90px; }
+
+        select.gc-field {
+          -webkit-appearance: none;
+          appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239AA0B4' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 0.2rem center;
+          padding-right: 1.1rem;
+          cursor: pointer;
+        }
+        select.gc-field option { background: ${isLight ? '#ffffff' : '#14192B'}; color: var(--ink); }
+
+        .gc-grade-chip {
+          display: inline-flex;
+          align-items: baseline;
+          gap: 0.3rem;
+          font-weight: 700;
+          color: var(--brass-deep);
+        }
+        .gc-grade-chip small { font-weight: 500; color: var(--slate); font-size: 0.75rem; }
+
+        .gc-remove {
+          appearance: none;
+          background: transparent;
+          border: 1px solid var(--line);
+          color: var(--slate);
+          border-radius: var(--radius);
+          width: 30px;
+          height: 30px;
+          cursor: pointer;
+          font-size: 0.85rem;
+          line-height: 1;
+          transition: border-color 0.15s ease, color 0.15s ease;
+        }
+        .gc-remove:hover { border-color: var(--danger); color: var(--danger); }
+        .gc-remove:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+        .gc-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 1.5rem;
+          flex-wrap: wrap;
+          margin-top: 2rem;
+        }
+        .gc-add {
+          appearance: none;
+          background: transparent;
+          border: 1px solid var(--brass);
+          color: var(--brass-deep);
+          font-size: 0.85rem;
+          font-weight: 600;
+          padding: 0.55rem 1.1rem;
+          border-radius: var(--radius);
+          cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .gc-add:hover { background: var(--brass); color: #1C1608; }
+        .gc-add:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+
+        .gc-result {
+          padding: 0.85rem 1.75rem;
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          background: var(--brass-tint);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          min-width: 160px;
+        }
+        .gc-result span.gc-result-label {
+          font-size: 0.78rem;
+          color: var(--slate);
+          font-weight: 600;
+        }
+        .gc-result span.gc-result-value {
+          font-family: Georgia, 'Iowan Old Style', serif;
+          font-size: 2.4rem;
+          font-weight: 600;
+          color: var(--brass-deep);
+          line-height: 1.15;
+        }
+        .gc-result span.gc-result-meta {
+          font-size: 0.72rem;
+          color: var(--slate);
+          margin-top: 0.15rem;
+        }
+
+        @media (max-width: 640px) {
+          .gc-ledger thead { display: none; }
+          .gc-ledger, .gc-ledger tbody, .gc-ledger tr, .gc-ledger td { display: block; width: 100%; }
+          .gc-ledger tr { border-bottom: 1px solid var(--line); padding: 0.75rem 0; }
+          .gc-ledger td { border: none !important; padding: 0.35rem 0 !important; }
+          .gc-field[type="number"] { max-width: 100%; }
+          .gc-footer { flex-direction: column; align-items: stretch; }
+          .gc-result { min-width: 0; }
+        }
+      `}</style>
+
+      <div className="gc-tabs">
+        <button className={`gc-tab ${calcMode === 'sgpa' ? 'active' : ''}`} onClick={() => setCalcMode('sgpa')}>
+          SGPA Calculator
+        </button>
+        <button className={`gc-tab ${calcMode === 'cgpa' ? 'active' : ''}`} onClick={() => setCalcMode('cgpa')}>
+          CGPA Calculator
+        </button>
+      </div>
+
+      {calcMode === 'sgpa' ? (
+        <div className="gc-panel">
+          <h2>Semester grade point average</h2>
+          <p className="gc-sub">Enter each course's credits and grade — the total updates as you type.</p>
+
+          <table className="gc-ledger">
+            <thead>
+              <tr>
+                <th style={{ width: '42%' }}>Course</th>
+                <th style={{ width: '18%' }}>Credits</th>
+                <th style={{ width: '30%' }}>Grade</th>
+                <th style={{ width: '10%' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {courses.map((course) => (
+                <tr key={course.id}>
+                  <td data-label="Course">
+                    <input
+                      type="text"
+                      value={course.name}
+                      onChange={(e) => updateCourse(course.id, 'name', e.target.value)}
+                      className="gc-field"
+                    />
+                  </td>
+                  <td data-label="Credits">
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={course.credits}
+                      onChange={(e) => updateCourse(course.id, 'credits', e.target.value)}
+                      className="gc-field"
+                    />
+                  </td>
+                  <td data-label="Grade">
+                    <select
+                      value={course.grade}
+                      onChange={(e) => updateCourse(course.id, 'grade', e.target.value)}
+                      className="gc-field"
+                    >
+                      {Object.keys(GRADE_POINTS).map(g => (
+                        <option key={g} value={g}>{GRADE_LABELS[g]}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button onClick={() => removeCourse(course.id)} className="gc-remove" aria-label={`Remove ${course.name}`}>
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="gc-footer">
+            <button onClick={addCourse} className="gc-add">+ Add course</button>
+            <div className="gc-result">
+              <span className="gc-result-label">Your SGPA</span>
+              <span className="gc-result-value">{sgpaResult}</span>
+              <span className="gc-result-meta">{sgpaTotals.totalCredits} credits</span>
             </div>
           </div>
-        ) : (
-          <div>
-            <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>CGPA Calculator</h2>
-            <div className="table-responsive">
-              <table className="timetable-matrix" style={{ minWidth: '100%' }}>
-                <thead>
-                  <tr>
-                    <th style={{ width: '40%' }}>Semester Name</th>
-                    <th style={{ width: '25%' }}>Total Credits</th>
-                    <th style={{ width: '25%' }}>SGPA</th>
-                    <th style={{ width: '10%' }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {semesters.map((sem) => (
-                    <tr key={sem.id}>
-                      <td>
-                        <input 
-                          type="text" 
-                          value={sem.name} 
-                          onChange={(e) => updateSemester(sem.id, 'name', e.target.value)}
-                          style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
-                        />
-                      </td>
-                      <td>
-                        <input 
-                          type="number" 
-                          min="1" 
-                          max="40"
-                          value={sem.credits} 
-                          onChange={(e) => updateSemester(sem.id, 'credits', e.target.value)}
-                          style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
-                        />
-                      </td>
-                      <td>
-                        <input 
-                          type="number" 
-                          min="0" 
-                          max="10"
-                          step="0.01"
-                          value={sem.sgpa} 
-                          onChange={(e) => updateSemester(sem.id, 'sgpa', e.target.value)}
-                          style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
-                        />
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button 
-                          onClick={() => removeSemester(sem.id)}
-                          style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer' }}
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem' }}>
-              <button onClick={addSemester} className="primary-btn" style={{ background: '#10b981' }}>
-                + Add Semester
-              </button>
-              
-              <div style={{ padding: '1rem 2rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Your CGPA</span>
-                <span style={{ fontSize: '2.5rem', fontWeight: '700', color: '#3b82f6' }}>{cgpaResult}</span>
-              </div>
+        </div>
+      ) : (
+        <div className="gc-panel">
+          <h2>Cumulative grade point average</h2>
+          <p className="gc-sub">Enter each semester's credit load and SGPA — weighted by credits automatically.</p>
+
+          <table className="gc-ledger">
+            <thead>
+              <tr>
+                <th style={{ width: '42%' }}>Semester</th>
+                <th style={{ width: '28%' }}>Total credits</th>
+                <th style={{ width: '20%' }}>SGPA</th>
+                <th style={{ width: '10%' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {semesters.map((sem) => (
+                <tr key={sem.id}>
+                  <td data-label="Semester">
+                    <input
+                      type="text"
+                      value={sem.name}
+                      onChange={(e) => updateSemester(sem.id, 'name', e.target.value)}
+                      className="gc-field"
+                    />
+                  </td>
+                  <td data-label="Total credits">
+                    <input
+                      type="number"
+                      min="1"
+                      max="40"
+                      value={sem.credits}
+                      onChange={(e) => updateSemester(sem.id, 'credits', e.target.value)}
+                      className="gc-field"
+                    />
+                  </td>
+                  <td data-label="SGPA">
+                    <input
+                      type="number"
+                      min="0"
+                      max="10"
+                      step="0.01"
+                      value={sem.sgpa}
+                      onChange={(e) => updateSemester(sem.id, 'sgpa', e.target.value)}
+                      className="gc-field"
+                    />
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button onClick={() => removeSemester(sem.id)} className="gc-remove" aria-label={`Remove ${sem.name}`}>
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="gc-footer">
+            <button onClick={addSemester} className="gc-add">+ Add semester</button>
+            <div className="gc-result">
+              <span className="gc-result-label">Your CGPA</span>
+              <span className="gc-result-value">{cgpaResult}</span>
+              <span className="gc-result-meta">{cgpaTotals.totalCredits} credits</span>
             </div>
           </div>
-        )}
-      </section>
+        </div>
+      )}
     </div>
   );
 };
