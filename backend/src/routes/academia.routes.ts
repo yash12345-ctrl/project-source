@@ -1,215 +1,198 @@
 import { Router, Request, Response } from 'express';
-import { scrapeAcademia } from '../scraper/academia.scraper';
-import { getCachedResult, setCachedResult, scheduleScrapeCronJob, triggerManualScrape } from '../scraper/scrape.cron';
-import { registerUserForBackgroundSync } from '../scraper/data.cron';
-import type { AcademiaCredentials } from '../types/academia.types';
-import { jobManager } from '../scraper/jobManager';
 import { prisma } from '../db/db';
+import { encryptPassword, decryptPassword } from '../utils/crypto';
+import { generateSessionToken, generateSyncToken, verifySessionToken, verifySyncToken } from '../utils/jwt';
+import { syncQueue } from '../jobs/syncWorker';
+import { requireAuth, AuthRequest } from '../middleware/auth';
+import { scrapeAcademia } from '../scraper/academia.scraper';
 
 const router = Router();
 
-/**
- * POST /api/academia/login
- * One-shot: logs in and scrapes data immediately. Returns fresh results.
- *
- * Body: { username: string, password: string }
- */
-router.post('/login', async (req: Request, res: Response) => {
-  let { username, password, forceSync, token } = req.body;
+// Basic memory store for rate limiting (in prod use Redis)
+const rateLimits: Record<string, number[]> = {};
+const checkRateLimit = (ip: string, max: number, windowMs: number) => {
+  const now = Date.now();
+  if (!rateLimits[ip]) rateLimits[ip] = [];
+  rateLimits[ip] = rateLimits[ip].filter(t => now - t < windowMs);
+  if (rateLimits[ip].length >= max) return false;
+  rateLimits[ip].push(now);
+  return true;
+};
 
-  if (token) {
-    const session = await prisma.session.findUnique({ where: { token } });
-    if (!session || session.expiresAt < new Date()) {
-      res.status(401).json({ success: false, error: 'Session expired. Please log in again.' });
-      return;
-    }
-    username = session.username;
-  }
-
-  if (!username) {
-    res.status(400).json({ success: false, error: 'Username is required.' });
+router.post('/login', async (req: Request, res: Response): Promise<void> => {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  if (!checkRateLimit(ip, 5, 60 * 1000)) { // 5 requests per minute
+    res.status(429).json({ success: false, error: 'Too many requests. Please try again later.' });
     return;
   }
 
-  if (!password) {
-    const account = await prisma.academiaAccount.findUnique({ where: { username } });
-    if (account) {
-      password = account.password;
-    } else {
-      res.status(401).json({ success: false, error: 'Academia password not found. Please log in.' });
-      return;
-    }
-  }
-
-  // If we just want cache (e.g. on page refresh) and it exists, return it instantly without scraping
-  const cached = await getCachedResult(username);
-  if (cached && !forceSync) {
-    console.log(`[API] /academia/login returned CACHE for ${username} (forceSync=false)`);
-    // Still ensure they are registered for background cron
-    registerUserForBackgroundSync(username, { academiaPassword: password });
-    res.json({
-      ...cached,
-      success: true,
-      message: 'Using cached data',
-      cached: true,
-      username // Return username so frontend knows who is logged in
-    });
+  const { username, password } = req.body;
+  if (!username || !password) {
+    res.status(400).json({ success: false, error: 'Username and password are required.' });
     return;
   }
-
-  console.log(`[API] /academia/login called for user: ${username}`);
-
-  let responseSent = false;
-
-  let sessionToken: string | null = null;
-
-  const createSession = async () => {
-    if (!sessionToken) {
-      await prisma.academiaAccount.upsert({
-        where: { username },
-        update: { password },
-        create: { username, password }
-      });
-
-      const crypto = require('crypto');
-      const newToken: string = crypto.randomUUID();
-      sessionToken = newToken;
-      await prisma.session.create({
-        data: {
-          token: newToken,
-          username,
-          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        }
-      });
-    }
-    return sessionToken as string;
-  };
-
-  const onLoginSuccess = async () => {
-    if (!responseSent) {
-      console.log(`[API] Login verified for ${username}. Returning early response (pending: true).`);
-      const cached = await getCachedResult(username);
-      const token = await createSession();
-      res.json({
-        ...(cached && { ...cached }),
-        success: true,
-        pending: true,
-        message: 'Login successful. Scraping in background...',
-        username,
-        token
-      });
-      responseSent = true;
-    }
-  };
 
   try {
-    const resultPromise = jobManager.runOrJoin(username, 'academia_live', () => 
-      scrapeAcademia({ username, password }, onLoginSuccess)
-    );
-    const result = await resultPromise;
+    let account = await prisma.academiaAccount.findUnique({ where: { username } });
 
-    if (result.success) {
-      setCachedResult(username, result);
-      registerUserForBackgroundSync(username, { academiaPassword: password });
-      const token = await createSession();
-      (result as any).token = token;
-      (result as any).username = username;
+    if (!account || !account.initial_sync_complete) {
+      // New User or hasn't completed initial sync
+      const encrypted = encryptPassword(password);
+      
+      account = await prisma.academiaAccount.upsert({
+        where: { username },
+        update: { password_encrypted: encrypted, credentials_valid: true },
+        create: { username, password_encrypted: encrypted }
+      });
+
+      // Update sync state to queued
+      await prisma.syncState.upsert({
+        where: { userId: username },
+        update: { status: 'queued', errorCode: null },
+        create: { userId: username, status: 'queued' }
+      });
+
+      // Enqueue BullMQ job with deduplication based on job ID
+      await syncQueue.add('full-sync', { username }, { 
+        jobId: `sync:${username}`, 
+        attempts: 3, 
+        backoff: { type: 'exponential', delay: 5000 } 
+      });
+
+      const syncToken = generateSyncToken(username);
+      res.json({ success: true, isNewUser: true, syncToken, message: 'Syncing in background...' });
+      return;
     }
 
-    if (!responseSent) {
+    // Returning user
+    if (!account.credentials_valid) {
+      // Password was previously marked invalid. Need to verify live before returning any token.
+      const result = await scrapeAcademia({ username, password });
       if (!result.success) {
-        res.status(401).json(result);
-      } else {
-        res.json(result);
+        res.status(401).json({ success: false, error: 'Invalid portal credentials', code: 'INVALID_CREDENTIALS' });
+        return;
       }
-      responseSent = true;
+      
+      // Verification succeeded. Restore credentials
+      account = await prisma.academiaAccount.update({
+        where: { username },
+        data: { password_encrypted: encryptPassword(password), credentials_valid: true }
+      });
+    } else {
+      // Validate submitted password against stored hash
+      try {
+        const storedPassword = decryptPassword(account.password_encrypted);
+        if (storedPassword !== password) {
+          // Password doesn't match cache. Might have changed on portal. Verify live.
+          const result = await scrapeAcademia({ username, password });
+          if (!result.success) {
+            res.status(401).json({ success: false, error: 'Invalid portal credentials', code: 'INVALID_CREDENTIALS' });
+            return;
+          }
+          // Verification succeeded. Update DB.
+          account = await prisma.academiaAccount.update({
+            where: { username },
+            data: { password_encrypted: encryptPassword(password) }
+          });
+        }
+      } catch (err) {
+        // Crypto decryption failed (should rarely happen), force live verify
+        const result = await scrapeAcademia({ username, password });
+        if (!result.success) {
+          res.status(401).json({ success: false, error: 'Invalid portal credentials', code: 'INVALID_CREDENTIALS' });
+          return;
+        }
+        account = await prisma.academiaAccount.update({
+          where: { username },
+          data: { password_encrypted: encryptPassword(password) }
+        });
+      }
     }
+
+    // Passwords match and valid. Issue session token.
+    const token = generateSessionToken(username, account.token_version);
+
+    // Enqueue background sync to refresh data silently
+    await prisma.syncState.upsert({
+      where: { userId: username },
+      update: { status: 'queued', errorCode: null },
+      create: { userId: username, status: 'queued' }
+    });
+    await syncQueue.add('background-sync', { username }, { 
+      jobId: `sync:${username}`, 
+      attempts: 3, 
+      backoff: { type: 'exponential', delay: 5000 } 
+    });
+
+    res.json({ success: true, isNewUser: false, token, message: 'Login successful' });
+    return;
+
   } catch (err: any) {
-    if (!responseSent) {
-      res.status(401).json({ success: false, error: err.message || 'Login failed' });
-      responseSent = true;
+    console.error('[Login] Error:', err);
+    res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+});
+
+router.get('/sync-status', async (req: Request, res: Response): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    res.status(401).json({ success: false, error: 'Unauthorized' });
+    return;
+  }
+
+  const token = authHeader.split(' ')[1] as string;
+  let username = '';
+
+  const syncPayload = verifySyncToken(token);
+  if (syncPayload) {
+    username = syncPayload.username;
+  } else {
+    const sessionPayload = verifySessionToken(token);
+    if (sessionPayload) {
+      username = sessionPayload.username;
+    } else {
+      res.status(401).json({ success: false, error: 'Invalid token' });
+      return;
     }
   }
-});
 
-/**
- * GET /api/academia/me
- * Resolves a session token to a username securely.
- */
-router.get('/me', async (req: Request, res: Response) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    res.status(401).json({ success: false, error: 'No token provided' });
+  const syncState = await prisma.syncState.findUnique({ where: { userId: username } });
+  
+  if (!syncState) {
+    res.json({ success: true, status: 'idle' });
     return;
   }
 
-  const session = await prisma.session.findUnique({ where: { token } });
-  if (!session || session.expiresAt < new Date()) {
-    res.status(401).json({ success: false, error: 'Session expired' });
-    return;
-  }
-
-  res.json({ success: true, username: session.username });
-});
-
-/**
- * POST /api/academia/schedule
- * Schedules a recurring cron job that scrapes data automatically.
- * Returns immediately; scraping runs in background.
- *
- * Body: { username: string, password: string, cronExpression?: string }
- * Default cron: every 30 minutes
- */
-router.post('/schedule', async (req: Request, res: Response) => {
-  const { username, password, cronExpression } = req.body as AcademiaCredentials & { cronExpression?: string };
-
-  if (!username || !password) {
-    res.status(400).json({ success: false, error: 'Username and password are required.' });
-    return;
-  }
-
-  const schedule = cronExpression;
-
-  scheduleScrapeCronJob({ username, password }, schedule);
-
-  res.json({
+  const response: any = {
     success: true,
-    message: `Cron job scheduled for ${username} with smart schedule. First scrape is running in background.`,
-  });
-});
+    status: syncState.status,
+    errorCode: syncState.errorCode,
+    lastSyncedAt: syncState.lastSyncedAt,
+    startedAt: syncState.startedAt
+  };
 
-/**
- * POST /api/academia/scrape
- * Manually triggers an immediate scrape and caches the result.
- *
- * Body: { username: string, password: string }
- */
-router.post('/scrape', async (req: Request, res: Response) => {
-  const { username, password } = req.body as AcademiaCredentials;
-
-  if (!username || !password) {
-    res.status(400).json({ success: false, error: 'Username and password are required.' });
-    return;
+  // If sync succeeded and client used a syncToken, hand them the full session token to avoid an extra endpoint request
+  if (syncState.status === 'success' && syncPayload) {
+    const account = await prisma.academiaAccount.findUnique({ where: { username } });
+    if (account) {
+      response.sessionToken = generateSessionToken(username, account.token_version);
+    }
   }
 
-  const result = await triggerManualScrape({ username, password });
-  res.json(result);
+  res.json(response);
 });
 
-/**
- * GET /api/academia/cached/:username
- * Returns the last cached scrape result for a given username (no re-scrape).
- */
-router.get('/cached/:username', async (req: Request, res: Response) => {
-  const username = req.params.username as string;
-  const cached = await getCachedResult(username);
-
+// Protect cached data endpoints
+router.get('/cached', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const username = req.user?.username;
+  const cached = await prisma.scrapedData.findUnique({ where: { username_type: { username: username!, type: 'full_result' } } });
+  
   if (!cached) {
-    res.status(404).json({ success: false, error: `No cached data found for user: ${username}. Please trigger a scrape first.` });
+    res.status(404).json({ success: false, error: 'No data found' });
     return;
   }
 
-  res.json(cached);
+  res.json(JSON.parse(cached.data));
 });
 
 export default router;

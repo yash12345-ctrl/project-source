@@ -50,8 +50,20 @@ model ScrapeJob {
 }
 
 model AcademiaAccount {
-  username String @id
-  password String
+  username              String   @id
+  password_encrypted    String
+  credentials_valid     Boolean  @default(true)
+  token_version         Int      @default(0)
+  initial_sync_complete Boolean  @default(false)
+}
+
+model SyncState {
+  userId         String   @id
+  status         String   @default("idle") // idle|queued|running|success|failed
+  errorCode      String?
+  lastSyncedAt   DateTime?
+  startedAt      DateTime?
+  jobId          String?
 }
 
 model PortalAccount {

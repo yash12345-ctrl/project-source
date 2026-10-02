@@ -9,15 +9,73 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Loading states
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncToken, setSyncToken] = useState<string | null>(null);
+  
   const navigate = useNavigate();
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get('error');
+    if (errorParam) {
+      setError(errorParam);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     const token = localStorage.getItem('session_token');
     if (token) {
       navigate('/dashboard');
     }
   }, [navigate]);
+
+  // Polling for first-time user sync
+  useEffect(() => {
+    let interval: number;
+    let timeout: number;
+
+    if (syncing && syncToken) {
+      const pollStatus = async () => {
+        try {
+          const res = await fetch('/api/academia/sync-status', {
+            headers: { 'Authorization': `Bearer ${syncToken}` }
+          });
+          const data = await res.json();
+          
+          if (data.status === 'success' && data.sessionToken) {
+            localStorage.setItem('session_token', data.sessionToken);
+            setSyncing(false);
+            navigate('/dashboard');
+          } else if (data.status === 'failed') {
+            setSyncing(false);
+            if (data.errorCode === 'AUTH_ERROR') {
+              setError('Invalid portal credentials. Please check your password.');
+            } else {
+              setError(`Sync failed (${data.errorCode}). Please try again later.`);
+            }
+          }
+        } catch (err) {
+          console.error('Polling error:', err);
+        }
+      };
+
+      interval = setInterval(pollStatus, 3000);
+      
+      // 90 second timeout so it doesn't spin forever
+      timeout = setTimeout(() => {
+        clearInterval(interval);
+        setSyncing(false);
+        setError('Sync timed out. The portal might be down. Please try again later.');
+      }, 90000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [syncing, syncToken, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,36 +86,36 @@ const Login: React.FC = () => {
       const response = await fetch('/api/academia/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: email, password, forceSync: true }),
+        body: JSON.stringify({ username: email, password }),
       });
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        setError(data.error || 'Failed to sign in. Please check your credentials.');
+        setError(data.error || 'Invalid username or password.');
+        setLoading(false);
         return;
       }
 
-      if (data.token) {
-        localStorage.setItem('session_token', data.token);
+      if (data.isNewUser) {
+        // Start polling flow
+        setSyncToken(data.syncToken);
+        setSyncing(true);
+      } else {
+        // Returning user - instant login
+        if (data.token) {
+          localStorage.setItem('session_token', data.token);
+        }
+        navigate('/dashboard');
       }
-      
-      // Fully secure: wipe out any old plain text storage
-      localStorage.removeItem('academia_credentials');
-      localStorage.removeItem('portal_password');
-
-      localStorage.setItem('academia_data', JSON.stringify(data));
-
-      navigate('/dashboard', { state: { data, pending: data.pending } });
     } catch (err) {
       setError('Network error. Make sure the backend server is running.');
       console.error('Login error:', err);
-    } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
+  if (loading || syncing) {
     return <SplashScreen theme="dark" />;
   }
 

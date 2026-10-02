@@ -63,5 +63,7 @@ if (role === 'WORKER' || role === 'ALL') {
   startQueueWorker();
   // Start the BullMQ worker for attendance/calendar/grades scraping
   require('./worker');
+  const { startSyncWorker } = require('./jobs/syncWorker');
+  startSyncWorker();
   console.log(`💪 [${role}] Scraper Worker Node started!`);
 }

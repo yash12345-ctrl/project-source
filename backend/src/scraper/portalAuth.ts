@@ -110,6 +110,16 @@ async function performLoginToPortal(username: string, password?: string, isInter
     } catch (e) {}
     
     const page = await context.newPage();
+
+    // SPEED OPTIMIZATION: Block heavy resources
+    await page.route("**/*", (route) => {
+      const type = route.request().resourceType();
+      if (["image", "media", "font", "stylesheet"].includes(type)) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
     console.log(`[PortalAuth] Navigating to portal...`);
     await page.goto(PORTAL_URL, { waitUntil: 'domcontentloaded' }).catch(() => {});
     await page.waitForTimeout(2000);

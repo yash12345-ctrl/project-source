@@ -349,77 +349,45 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
     );
 
   // ==========================================
-  // POLL PENDING SCRAPE
+  // POLL SYNC STATUS
   // ==========================================
 
   useEffect(() => {
-    if (!isPendingScrape) return;
+    const token = localStorage.getItem('session_token');
+    if (!token) return;
 
-    const creds =
-      JSON.stringify({ username: sessionUsername });
-
-    if (!creds) return;
-
-    const { username } =
-      JSON.parse(creds);
-
-    pollIntervalRef.current =
-      setInterval(async () => {
-        try {
-          const res = await fetch(
-            `/api/academia/cached/${encodeURIComponent(username)}`
-          );
-
-          if (res.ok) {
-            const freshData =
-              await res.json();
-
-            if (freshData.success) {
-              setData(freshData);
-
-              localStorage.setItem(
-                'academia_data',
-                JSON.stringify(freshData)
-              );
-
-              setIsPendingScrape(false);
-              setIsBackgroundSyncing(false);
-
-              if (pollIntervalRef.current) {
-                clearInterval(
-                  pollIntervalRef.current
-                );
-              }
-            }
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const res = await fetch('/api/academia/sync-status');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            const isSyncing = data.status === 'queued' || data.status === 'running';
+            setIsBackgroundSyncing(isSyncing);
+            
+            // If it just finished syncing, we could refetch cached data, but
+            // for now, just updating the UI is enough.
           }
-        } catch (e) {
-          // Ignore polling error
         }
-      }, 3000);
+      } catch (e) {
+        // Ignore polling error
+      }
+    }, 5000);
 
     return () => {
       if (pollIntervalRef.current) {
-        clearInterval(
-          pollIntervalRef.current
-        );
+        clearInterval(pollIntervalRef.current);
       }
     };
-  }, [isPendingScrape]);
+  }, []);
 
   // ==========================================
-  // INITIAL SYNC
+  // INITIAL LOAD
   // ==========================================
 
   useEffect(() => {
-    if (
-      !location.state?.data &&
-      !location.state?.pending
-    ) {
-      handleBackgroundSync();
-    } else {
-      syncPortalTabs();
-    }
-  }, [location.state?.data, location.state?.pending]);
+    syncPortalTabs();
+  }, []);
 
   const handlePortalError = (error: string) => {
     setPortalError(error);
@@ -693,296 +661,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
   // BACKGROUND SYNC
   // ==========================================
 
-  const handleBackgroundSync = async () => {
-    const savedCreds =
-      JSON.stringify({ username: sessionUsername });
 
-    if (!savedCreds) {
-      setIsBackgroundSyncing(false);
-      return;
-    }
-
-    try {
-      setIsBackgroundSyncing(true);
-
-      const {
-        username,
-        password
-      } = JSON.parse(savedCreds);
-
-      const response =
-        await fetch(
-          '/api/academia/login',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type':
-                'application/json'
-            },
-            body: JSON.stringify({
-              username,
-              password
-            })
-          }
-        );
-
-      const result =
-        await response.json();
-
-      if (result.success) {
-        setData(result);
-
-        localStorage.setItem(
-          'academia_data',
-          JSON.stringify(result)
-        );
-
-        if (result.pending) {
-          setIsPendingScrape(true);
-        }
-
-        setSyncError(null);
-      } else {
-        setSyncError(
-          result.error ||
-          'Failed to sync data.'
-        );
-      }
-
-      const portalPwd = undefined;
-
-      if (true) {
-        await Promise.allSettled([
-
-          // ATTENDANCE
-
-          (async () => {
-            try {
-              const attRes =
-                await fetch(
-                  '/api/attendance/login',
-                  {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type':
-                        'application/json'
-                    },
-                    body: JSON.stringify({
-                      username,
-                      password: portalPwd
-                    })
-                  }
-                );
-
-              const attData =
-                await attRes.json();
-
-              if (attData.success) {
-                const attendance =
-                  Array.isArray(
-                    attData.attendance
-                  )
-                    ? attData.attendance
-                    : [];
-
-                setAttendanceData(
-                  attendance
-                );
-
-                localStorage.setItem(
-                  'academia_attendance',
-                  JSON.stringify(attendance)
-                );
-
-                localStorage.setItem(
-                  'academia_attendance_user',
-                  username
-                );
-              }
-            } catch (e) {
-              // Ignore attendance error
-            }
-          })(),
-
-          // GRADES
-
-          (async () => {
-            try {
-              const gradeRes =
-                await fetch(
-                  '/api/grades/login',
-                  {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type':
-                        'application/json'
-                    },
-                    body: JSON.stringify({
-                      username,
-                      password: portalPwd
-                    })
-                  }
-                );
-
-              const gradeData =
-                await gradeRes.json();
-
-              if (gradeData.success) {
-                const semesters =
-                  Array.isArray(
-                    gradeData.semesters
-                  )
-                    ? gradeData.semesters
-                    : [];
-
-                setGradesData(
-                  semesters
-                );
-
-                setCgpa(
-                  gradeData.cgpa || ''
-                );
-
-                localStorage.setItem(
-                  'academia_grades',
-                  JSON.stringify(semesters)
-                );
-
-                localStorage.setItem(
-                  'academia_grades_user',
-                  username
-                );
-
-                if (gradeData.cgpa) {
-                  localStorage.setItem(
-                    'academia_cgpa',
-                    gradeData.cgpa
-                  );
-                }
-              }
-            } catch (e) {
-              // Ignore grades error
-            }
-          })(),
-
-          // FEES
-
-          (async () => {
-            try {
-              const feeRes =
-                await fetch(
-                  '/api/fees/login',
-                  {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type':
-                        'application/json'
-                    },
-                    body: JSON.stringify({
-                      username,
-                      password: portalPwd
-                    })
-                  }
-                );
-
-              const nextFeeData =
-                await feeRes.json();
-
-              if (nextFeeData.success) {
-                setFeeData(
-                  nextFeeData
-                );
-
-                localStorage.setItem(
-                  'academia_fees',
-                  JSON.stringify(nextFeeData)
-                );
-
-                localStorage.setItem(
-                  'academia_fees_user',
-                  username
-                );
-              }
-            } catch (e) {
-              // Ignore fees error
-            }
-          })(),
-
-          // CALENDAR
-
-          (async () => {
-            try {
-              const calRes =
-                await fetch(
-                  '/api/calendar/login',
-                  {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type':
-                        'application/json'
-                    },
-                    body: JSON.stringify({
-                      username,
-                      password: portalPwd
-                    })
-                  }
-                );
-
-              const calData =
-                await calRes.json();
-
-              if (calData.success) {
-                setCalendarData(
-                  calData
-                );
-
-                localStorage.setItem(
-                  'academia_calendar',
-                  JSON.stringify(calData)
-                );
-
-                localStorage.setItem(
-                  'academia_calendar_user',
-                  username
-                );
-              }
-            } catch (e) {
-              // Ignore calendar error
-            }
-          })(),
-
-          // INTERNAL MARKS
-
-          (async () => {
-            try {
-              const internalRes = await fetch('/api/internal-marks/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password: portalPwd })
-              });
-
-              const internalData = await internalRes.json();
-              if (internalData.success) {
-                const marks = Array.isArray(internalData.marks) ? internalData.marks : [];
-                setInternalMarksData(marks);
-                localStorage.setItem('academia_internalmarks', JSON.stringify(marks));
-                localStorage.setItem('academia_internalmarks_user', username);
-              }
-            } catch (e) {
-              // Ignore
-            }
-          })()
-        ]);
-      }
-    } catch (err: any) {
-      setSyncError(
-        `Network or server error: ${err.message || 'Check console'
-        }`
-      );
-    } finally {
-      setIsBackgroundSyncing(false);
-    }
-  };
 
   // ==========================================
   // LOGOUT

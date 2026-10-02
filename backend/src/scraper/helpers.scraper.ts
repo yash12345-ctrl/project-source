@@ -35,6 +35,16 @@ export async function scrapeHelpersSem1(force: boolean = false): Promise<Subject
     
     const context = await browser.newContext();
     const page = await context.newPage();
+
+    // SPEED OPTIMIZATION: Block heavy resources
+    await page.route("**/*", (route) => {
+      const type = route.request().resourceType();
+      if (["image", "media", "font", "stylesheet"].includes(type)) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
     
     console.log('[Helpers Scraper] Navigating to Sem 1...');
     await page.goto('https://www.thehelpers.tech/semesters/1', { waitUntil: 'networkidle', timeout: 30000 });

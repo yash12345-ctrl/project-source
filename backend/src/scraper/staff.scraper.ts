@@ -23,6 +23,16 @@ export async function scrapeStaffFinder(query: string): Promise<StaffMember[]> {
     });
     
     const page = await context.newPage();
+
+    // SPEED OPTIMIZATION: Block heavy resources
+    await page.route("**/*", (route) => {
+      const type = route.request().resourceType();
+      if (["image", "media", "font", "stylesheet"].includes(type)) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
     
     // We will intercept the AJAX response to extract the HTML directly.
     let searchResponseHtml = '';
@@ -193,6 +203,16 @@ export async function scrapeStaffFinderBulk(queries: string[]): Promise<Record<s
     
     // We will do this sequentially to avoid overwhelming the WAF, but using a SINGLE page context for speed!
     const page = await context.newPage();
+
+    // SPEED OPTIMIZATION: Block heavy resources
+    await page.route("**/*", (route) => {
+      const type = route.request().resourceType();
+      if (["image", "media", "font", "stylesheet"].includes(type)) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
     let searchResponseHtml = '';
     
     page.on('response', async response => {
