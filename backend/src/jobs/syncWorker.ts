@@ -61,7 +61,7 @@ export const startSyncWorker = () => {
         enqueueScrapeJob('attendance_live', username, { password: portalAccount.password, forceSync: true }).catch(console.error);
         enqueueScrapeJob('grades_live', username, { password: portalAccount.password, forceSync: true }).catch(console.error);
         enqueueScrapeJob('internalmarks_live', username, { password: portalAccount.password, forceSync: true }).catch(console.error);
-        enqueueScrapeJob('fees_live', username, { password: portalAccount.password, forceSync: true }).catch(console.error);
+        enqueueScrapeJob('fee_live', username, { password: portalAccount.password, forceSync: true }).catch(console.error);
         enqueueScrapeJob('calendar_live', username, { password: portalAccount.password, forceSync: true }).catch(console.error);
       }
 
