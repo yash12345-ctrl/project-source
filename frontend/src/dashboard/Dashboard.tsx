@@ -53,7 +53,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
   const navigate = useNavigate();
   const { theme } = useTheme();
 
-  const [data, setData] = useState<any>(() => {
+  const [data, _setData] = useState<any>(() => {
     if (location.state?.data) {
       localStorage.setItem(
         'academia_data',
@@ -332,10 +332,10 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
     !localStorage.getItem('academia_data')
   );
 
-  const [syncError, setSyncError] =
+  const [syncError, _setSyncError] =
     useState<string | null>(null);
 
-  const [isPendingScrape, setIsPendingScrape] =
+  const [isPendingScrape, _setIsPendingScrape] =
     useState<boolean>(
       location.state?.pending === true
     );
