@@ -79,16 +79,16 @@ router.post('/login', async (req, res) => {
       const lastSync = await cacheGet<number>(cooldownKey);
       if (lastSync) {
         const timeElapsed = Date.now() - lastSync;
-        const cooldownTime = 60 * 60 * 1000; // 1 hour
+        const cooldownTime = 10 * 1000; // 10 seconds for testing (was 1 hour)
         if (timeElapsed < cooldownTime) {
           return res.status(429).json({ 
             success: false, 
-            error: 'You can only manually sync once per hour',
+            error: 'You can only manually sync once every 10 seconds',
             remainingTimeMs: cooldownTime - timeElapsed
           });
         }
       }
-      await cacheSet(cooldownKey, Date.now(), 60 * 60);
+      await cacheSet(cooldownKey, Date.now(), 10);
     }
 
     console.log(`[Attendance Route] 🐢 Cache MISS or Force Sync for ${username}. Queueing live scrape...`);

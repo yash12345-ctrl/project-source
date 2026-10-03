@@ -6,6 +6,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { scrapeAcademia } from '../scraper/academia.scraper';
 import { registerUserForBackgroundSync } from '../scraper/data.cron';
 import { getRedisClient, isRedisReady } from '../db/redis';
+import { enqueueScrapeJob } from '../queue/scraperQueue';
 
 const router = Router();
 
@@ -44,11 +45,36 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
     if (!account || !account.initial_sync_complete) {
       // New User or hasn't completed initial sync
+
+      // Attempt login immediately to verify password before saving
+      const result = await scrapeAcademia({ username, password });
+      
+      if (!result.success) {
+        res.status(401).json({ success: false, error: result.error || 'Invalid portal credentials', code: 'INVALID_CREDENTIALS' });
+        return;
+      }
+      
+      // Verification succeeded. Save to DB.
       account = await prisma.academiaAccount.upsert({
         where: { username },
-        update: { password_encrypted: password, credentials_valid: true },
-        create: { username, password_encrypted: password }
+        update: { password_encrypted: password, credentials_valid: true, initial_sync_complete: true },
+        create: { username, password_encrypted: password, credentials_valid: true, initial_sync_complete: true }
       });
+
+      // Clear any existing cooldowns in Redis so new users can test syncing immediately
+      try {
+        const { getRedisClient } = require('../db/redis');
+        const redisClient = getRedisClient();
+        if (redisClient) {
+          await redisClient.del(`cooldown:sync_now:attendance:${username}`);
+          await redisClient.del(`cooldown:sync_now:grades:${username}`);
+          await redisClient.del(`cooldown:sync_now:fees:${username}`);
+          await redisClient.del(`cooldown:sync_now:internalmarks:${username}`);
+          await redisClient.del(`cooldown:sync_now:calendar:${username}`);
+        }
+      } catch (err) {
+        console.error('Failed to clear cooldowns:', err);
+      }
 
       await prisma.portalAccount.upsert({
         where: { username },
@@ -56,25 +82,32 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
         create: { username, password }
       });
 
-      // Update sync state to queued
-      await prisma.syncState.upsert({
-        where: { userId: username },
-        update: { status: 'queued', errorCode: null },
-        create: { userId: username, status: 'queued' }
+      // Save cached JSON results
+      await prisma.scrapedData.upsert({
+        where: { username_type: { username, type: 'full_result' } },
+        update: { data: JSON.stringify(result) },
+        create: { username, type: 'full_result', data: JSON.stringify(result) }
       });
 
-      // Enqueue BullMQ job with a unique job ID per request
-      await syncQueue.add('full-sync', { username }, {
-        jobId: `sync-${username}-${Date.now()}`,
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 5000 }
+      // Update sync state to success
+      await prisma.syncState.upsert({
+        where: { userId: username },
+        update: { status: 'success', errorCode: null, lastSyncedAt: new Date() },
+        create: { userId: username, status: 'success', lastSyncedAt: new Date() }
       });
 
       // Register user for full background polling of all tabs via cron
       await registerUserForBackgroundSync(username, { academiaPassword: password, portalPassword: password });
 
-      const syncToken = generateSyncToken(username);
-      res.json({ success: true, isNewUser: true, syncToken, message: 'Syncing in background...' });
+      // Enqueue background scrape jobs for the portal tabs
+      enqueueScrapeJob('attendance_live', username, { password, forceSync: true }).catch(console.error);
+      enqueueScrapeJob('grades_live', username, { password, forceSync: true }).catch(console.error);
+      enqueueScrapeJob('internalmarks_live', username, { password, forceSync: true }).catch(console.error);
+      enqueueScrapeJob('fee_live', username, { password, forceSync: true }).catch(console.error);
+      enqueueScrapeJob('calendar_live', username, { password, forceSync: true }).catch(console.error);
+
+      const token = generateSessionToken(username, account.token_version);
+      res.json({ isNewUser: true, token, message: 'Login successful', ...result });
       return;
     }
 
@@ -175,8 +208,26 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     }
 
     const cached = await prisma.scrapedData.findUnique({ where: { username_type: { username, type: 'full_result' } } });
-    const cachedData = cached ? JSON.parse(cached.data) : {};
+    
+    // If cached data is somehow missing, treat as a new sync to rebuild it
+    if (!cached || !cached.data) {
+      console.log(`[Login] Missing cached data for ${username}, forcing live scrape...`);
+      const result = await scrapeAcademia({ username, password });
+      if (!result.success) {
+        res.status(401).json({ success: false, error: result.error || 'Invalid portal credentials', code: 'INVALID_CREDENTIALS' });
+        return;
+      }
+      await prisma.scrapedData.upsert({
+        where: { username_type: { username, type: 'full_result' } },
+        update: { data: JSON.stringify(result) },
+        create: { username, type: 'full_result', data: JSON.stringify(result) }
+      });
+      const token = generateSessionToken(username, account.token_version);
+      res.json({ isNewUser: false, token, message: 'Login successful', ...result, success: true });
+      return;
+    }
 
+    const cachedData = JSON.parse(cached.data);
     res.json({ success: true, isNewUser: false, token, message: 'Login successful', ...cachedData });
     return;
 

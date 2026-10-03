@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Eye, EyeOff } from 'lucide-react';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import './Dashboard.css';
@@ -10,29 +9,14 @@ interface InternalMarksTabProps {
   internalMarksData: any[] | null;
   setInternalMarksData: (data: any[]) => void;
   savedUsername?: string;
+  isBackgroundSyncing?: boolean;
 }
 
-const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, setInternalMarksData, savedUsername }) => {
+const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, setInternalMarksData, savedUsername, isBackgroundSyncing }) => {
   const [loading, setLoading] = useState(false);
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
-  const [initialSyncStarted, setInitialSyncStarted] = useState(false);
-
   const username = savedUsername || '';
-  const netId = username.split('@')[0] || '';
-
-  useEffect(() => {
-    if (!initialSyncStarted && netId && (!internalMarksData || internalMarksData.length === 0)) {
-      setInitialSyncStarted(true);
-      let savedPortalPwd = localStorage.getItem('portal_password');
-      if (savedPortalPwd) {
-        setPassword(savedPortalPwd);
-        fetchInternalMarks(savedPortalPwd);
-      }
-    }
-  }, [initialSyncStarted, netId, internalMarksData]);
 
   const fetchInternalMarks = async (pwdToUse: string, manual: boolean = false) => {
     if (!username) {
@@ -79,9 +63,9 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
       const token = localStorage.getItem('session_token');
       const res = await fetch('/api/sync_now/internal-marks', {
         method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -107,13 +91,8 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!password) {
-      setError('Please enter your portal password.');
-      return;
-    }
-    await fetchInternalMarks(password, true);
+  const handleManualSync = async () => {
+    await fetchInternalMarks('', true);
   };
 
   const groupedData: Record<string, { subject: string; title: string; marks: any[]; chartData: any[] }> = {};
@@ -140,7 +119,7 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
           ]
         };
       }
-      
+
       const obtained = parseFloat(row.markObtained);
       const max = parseFloat(row.maxMark);
       let percentage = 0;
@@ -150,7 +129,7 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
         if (percentage < 50) tone = 'tone-low';
         else if (percentage < 75) tone = 'tone-warn';
       }
-      
+
       const chartPoint = {
         name: row.description,
         shortName: row.description.includes('-') ? row.description.split('-').slice(1).join('-').trim() : 'Total',
@@ -160,7 +139,7 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
         label: `${row.markObtained}/${row.maxMark}`,
         tone
       };
-      
+
       groupedData[code].marks.push({ ...row, percentage, tone });
       groupedData[code].chartData.push(chartPoint);
     });
@@ -182,7 +161,7 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
           {!loading && !infoMsg && (
             <button
               className="att-sync-btn"
-              onClick={handleSyncNow}
+              onClick={handleManualSync}
               disabled={loading}
               style={{
                 background: 'var(--brass, #C9A227)',
@@ -199,9 +178,9 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
             </button>
           )}
           {loading && (
-             <span className="att-sync-btn" style={{opacity: 0.7, padding: '8px 16px', fontSize: '13px', color: 'var(--text-primary)' }}>
-                Syncing…
-             </span>
+            <span className="att-sync-btn" style={{ opacity: 0.7, padding: '8px 16px', fontSize: '13px', color: 'var(--text-primary)' }}>
+              Syncing…
+            </span>
           )}
         </header>
 
@@ -234,40 +213,40 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
                   <h3 style={{ margin: '0 0 4px 0', fontFamily: 'Newsreader', fontSize: '18px', color: 'var(--text-primary)' }}>{subject.title}</h3>
                   <span style={{ fontFamily: 'IBM Plex Mono', fontSize: '11px', color: 'var(--text-muted)' }}>{subject.subject}</span>
                 </div>
-                
+
                 <div style={{ width: '100%', height: 140, marginBottom: '1rem' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={subject.chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="none" stroke="var(--hairline)" vertical={true} horizontal={true} />
-                      <XAxis 
-                        dataKey="shortName" 
-                        stroke="var(--text-muted)" 
-                        tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'IBM Plex Mono' }} 
-                        tickMargin={8} 
-                        axisLine={{ stroke: 'var(--text-muted)' }} 
-                        tickLine={false} 
-                      />
-                      <YAxis 
-                        stroke="var(--text-muted)" 
-                        domain={[0, 100]} 
-                        tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'IBM Plex Mono' }} 
-                        tickMargin={8} 
-                        axisLine={{ stroke: 'var(--text-muted)' }} 
+                      <XAxis
+                        dataKey="shortName"
+                        stroke="var(--text-muted)"
+                        tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'IBM Plex Mono' }}
+                        tickMargin={8}
+                        axisLine={{ stroke: 'var(--text-muted)' }}
                         tickLine={false}
                       />
-                      <Tooltip 
+                      <YAxis
+                        stroke="var(--text-muted)"
+                        domain={[0, 100]}
+                        tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'IBM Plex Mono' }}
+                        tickMargin={8}
+                        axisLine={{ stroke: 'var(--text-muted)' }}
+                        tickLine={false}
+                      />
+                      <Tooltip
                         contentStyle={{ backgroundColor: 'var(--ink-panel)', borderColor: 'var(--hairline)', borderRadius: '8px', color: 'var(--text-primary)', fontFamily: 'Inter' }}
                         itemStyle={{ color: '#d32f2f' }}
                         formatter={(value: any, _name: any, props: any) => [`${value}% (${props.payload.label})`, 'Score']}
                         labelFormatter={(label: any, payload: any) => payload && payload[0] ? payload[0].payload.name : label}
                       />
-                      <Line 
-                        type="linear" 
-                        dataKey="percentage" 
-                        stroke="#d32f2f" 
-                        strokeWidth={3} 
-                        dot={{ r: 5, fill: '#0d47a1', strokeWidth: 0 }} 
-                        activeDot={{ r: 7, fill: '#0d47a1', strokeWidth: 0 }} 
+                      <Line
+                        type="linear"
+                        dataKey="percentage"
+                        stroke="#d32f2f"
+                        strokeWidth={3}
+                        dot={{ r: 5, fill: '#0d47a1', strokeWidth: 0 }}
+                        activeDot={{ r: 7, fill: '#0d47a1', strokeWidth: 0 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -306,15 +285,14 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
     );
   }
 
-  if (loading) {
+  if (isBackgroundSyncing) {
     return <SkeletonLoader type="table" />;
   }
 
   return (
     <div className="marks-tab marks-tab-centered">
       <section className="marks-login-card">
-        <span className="marks-eyebrow marks-login-eyebrow">Student Portal</span>
-        <h2 className="marks-login-title">Portal Login</h2>
+        <h2 className="marks-login-title">Data Not Found</h2>
 
         {loading ? (
           <div className="marks-loading-wrap">
@@ -323,9 +301,7 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
         ) : (
           <>
             <p className="marks-login-copy">
-              Internal marks are hosted on the SRM Student Portal.
-              <br />
-              Enter your password to fetch your marks.
+              Internal marks couldn't be loaded automatically. Click below to try fetching them again.
             </p>
 
             {error && (
@@ -334,55 +310,9 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
               </div>
             )}
 
-            <form onSubmit={handleLogin}>
-              <div className="marks-input-group">
-                <label>NetID</label>
-                <input
-                  type="text"
-                  className="marks-login-input marks-login-input-disabled"
-                  value={netId}
-                  disabled
-                />
-              </div>
-
-              <div className="marks-input-group">
-                <label>Portal Password</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    className="marks-login-input"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="Password"
-                    autoFocus
-                    style={{ paddingRight: '40px', width: '100%' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{ 
-                      position: 'absolute', 
-                      right: '12px', 
-                      background: 'none', 
-                      border: 'none', 
-                      color: 'var(--text-muted, #757D8F)', 
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: 0
-                    }}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              <button type="submit" className="marks-primary-btn marks-login-submit">
-                Login to Portal
-              </button>
-            </form>
+            <button type="button" className="marks-primary-btn marks-login-submit" onClick={handleManualSync}>
+              Sync Now
+            </button>
           </>
         )}
       </section>

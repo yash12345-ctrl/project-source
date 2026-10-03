@@ -1,0 +1,13 @@
+See For New User 
+
+If a new user login enter their academia email and password then scraper start scraping the acedimia portal ,
+attempt login if password is worng it show alert to user that password is worng and if password is correct then it saved password in redis and then db,
+and i want when it scrape the acediam webitsite then only it show dashboard before that it show splash screen,
+and when user see the dashboard only when academia is scraped so it store the user all data in redish and then to db and ,
+when user click on attendance or fees or grade , calender if password is not their in db for student portal then it ask user for password,then scrape then show data saved data to redish and then db
+
+Now Existing User
+if user already login in old user so it if session is alive it open dashboard show catch or db data which is available then
+in background acedimai scraper work it scrape and update in background and same for attendance an dinside the code i already set the scraper timing 
+
+so i want remove that it user it new so it show splash screen when acedimia scraper isi done and if user is old thne it show catch data or db data and background scraping work accorind to their time set

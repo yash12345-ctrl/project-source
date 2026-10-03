@@ -22,7 +22,7 @@ import { SkeletonLoader } from '../components/SkeletonLoader';
 import { useTheme } from '../context/ThemeContext';
 import './Dashboard.css';
 
-const BackgroundVideo = ({ theme }: { theme: 'light' | 'dark' }) => {
+const BackgroundVideo = React.memo(({ theme }: { theme: 'light' | 'dark' }) => {
   if (theme === 'light') {
     return (
       <div className="bg-light-premium">
@@ -46,7 +46,7 @@ const BackgroundVideo = ({ theme }: { theme: 'light' | 'dark' }) => {
       <div className="bg-video-overlay" />
     </>
   );
-};
+});
 
 const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }) => {
   const location = useLocation();
@@ -337,7 +337,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
   const [isPendingScrape] =
     useState<boolean>(
-      location.state?.pending === true
+      location.state?.pending === true || location.state?.data?.isNewUser === true
     );
 
   const [portalError, setPortalError] =
@@ -347,6 +347,59 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
     useRef<ReturnType<typeof setInterval> | null>(
       null
     );
+
+  const [isPortalSyncing, setIsPortalSyncing] = useState(false);
+
+  const handlePortalSyncComplete = async () => {
+    setIsPortalSyncing(true);
+    const token = localStorage.getItem('session_token');
+    if (!token) {
+      setIsPortalSyncing(false);
+      return;
+    }
+
+    try {
+      const fetchWithToken = (url: string) => fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ manual: true, username: sessionUsername })
+      }).then(res => res.json());
+
+      const p1 = fetchWithToken('/api/grades/login').then(res => {
+        if (res.success) {
+          setGradesData(res.semesters || []);
+          localStorage.setItem('academia_grades', JSON.stringify(res.semesters || []));
+          if (res.cgpa) setCgpa(res.cgpa);
+        }
+      });
+      const p2 = fetchWithToken('/api/fees/login').then(res => {
+        if (res.success) {
+          setFeeData(res);
+          localStorage.setItem('academia_fees', JSON.stringify(res));
+        }
+      });
+      const p3 = fetchWithToken('/api/calendar/login').then(res => {
+        if (res.success) {
+          setCalendarData(res);
+          localStorage.setItem('academia_calendar', JSON.stringify(res));
+        }
+      });
+      const p4 = fetchWithToken('/api/internal-marks/login').then(res => {
+        if (res.success) {
+          setInternalMarksData(res.marks || []);
+          localStorage.setItem('academia_internalmarks', JSON.stringify(res.marks || []));
+        }
+      });
+
+      await Promise.allSettled([p1, p2, p3, p4]);
+
+    } finally {
+      setIsPortalSyncing(false);
+    }
+  };
 
   // ==========================================
   // POLL SYNC STATUS
@@ -793,8 +846,8 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
   // LOADING / EMPTY STATE
   // ==========================================
 
-  // A user has real data if it contains an actual profile, rather than just the new-user placeholder
-  const hasRealData = data && !data.isNewUser && data.profile;
+  // A user has real data if it contains an actual profile
+  const hasRealData = data && data.profile;
   const hasAnyData = hasRealData || attendanceData || gradesData;
 
   // Global loading state: no data exists yet AND a sync is currently running
@@ -803,57 +856,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
   // Global empty state: no data exists and NO sync is running (e.g., sync failed)
   const isCompletelyEmpty = !hasAnyData && !isGlobalLoading;
 
-  // NOTE: BackgroundVideo must NOT be inside conditional early-returns.
-  // Putting it in separate return branches causes React to unmount/remount the
-  // <video> DOM element on every state transition, triggering repeated v2.mp4
-  // requests. Instead we use a single return and conditionally render the content.
-  if (isGlobalLoading) {
-    return (
-      <div className="dashboard-container">
-        <BackgroundVideo theme={theme} />
-        <SplashScreen theme={theme} />
-      </div>
-    );
-  }
-
-  if (isCompletelyEmpty) {
-    return (
-      <div className="dashboard-container">
-        <BackgroundVideo theme={theme} />
-
-        <Sidebar
-          isMinimal={true}
-          handleLogout={handleLogout}
-        />
-
-        <main
-          className="main-content"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <div className="empty-state">
-
-            <p>
-              {syncError ||
-                'No academic data found. Please log in again.'}
-            </p>
-
-            <button
-              onClick={handleLogout}
-              className="primary-btn"
-            >
-              Go to Login
-            </button>
-
-          </div>
-        </main>
-
-      </div>
-    );
-  }
+  // Early returns removed to prevent unmounting <BackgroundVideo />
 
 
   // ==========================================
@@ -928,25 +931,46 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
       <BackgroundVideo theme={theme} />
 
-      <Sidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        handleLogout={handleLogout}
-      />
+      {isGlobalLoading ? (
+        <SplashScreen theme={theme} />
+      ) : isCompletelyEmpty ? (
+        <>
+          <Sidebar isMinimal={true} handleLogout={handleLogout} />
+          <main
+            className="main-content"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <div className="empty-state">
+              <p>{syncError || 'No academic data found. Please log in again.'}</p>
+              <button onClick={handleLogout} className="primary-btn">Go to Login</button>
+            </div>
+          </main>
+        </>
+      ) : (
+        <>
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            handleLogout={handleLogout}
+          />
 
-      <main className="main-content">
+          <main className="main-content">
 
-        <TopBar
-          activeTab={activeTab}
-          userName={
-            data?.profile?.name ||
-            data?.username ||
-            'Student'
-          }
-          isBackgroundSyncing={
-            isBackgroundSyncing
-          }
-        />
+            <TopBar
+              activeTab={activeTab}
+              userName={
+                data?.profile?.name ||
+                data?.username ||
+                'Student'
+              }
+              isBackgroundSyncing={
+                isBackgroundSyncing
+              }
+            />
 
 
         <div className="content-area">
@@ -1000,13 +1024,22 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
                   attendanceData={attendanceData}
                   setAttendanceData={setAttendanceData}
                   savedUsername={data?.username}
+                  onSyncComplete={handlePortalSyncComplete}
                 />
               ) : activeTab === 'internal-marks' ? (
-                <InternalMarksTab
-                  internalMarksData={internalMarksData}
-                  setInternalMarksData={setInternalMarksData}
-                  savedUsername={data?.username}
-                />
+                !attendanceData ? (
+                  <div className="empty-state" style={{ marginTop: '4rem' }}>
+                    <p>Please log in to the student portal via the Attendance tab first.</p>
+                    <button onClick={() => setActiveTab('attendance')} className="primary-btn">Go to Attendance</button>
+                  </div>
+                ) : (
+                  <InternalMarksTab
+                    internalMarksData={internalMarksData}
+                    setInternalMarksData={setInternalMarksData}
+                    savedUsername={data?.username}
+                    isBackgroundSyncing={isPortalSyncing}
+                  />
+                )
               ) : activeTab === 'faculty-finder' ? (
                 <ComingSoon featureName="Faculty Finder" />
               ) : activeTab === 'mess' ? (
@@ -1016,23 +1049,46 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
               ) : activeTab === 'sem1' ? (
                 <Sem1 onBack={() => setActiveTab('study')} />
               ) : activeTab === 'marks' ? (
-                <MarksTab
-                  gradesData={gradesData}
-                  setGradesData={setGradesData}
-                  cgpa={cgpa}
-                  setCgpa={setCgpa}
-                  savedUsername={data?.username}
-                />
+                !attendanceData ? (
+                  <div className="empty-state" style={{ marginTop: '4rem' }}>
+                    <p>Please log in to the student portal via the Attendance tab first.</p>
+                    <button onClick={() => setActiveTab('attendance')} className="primary-btn">Go to Attendance</button>
+                  </div>
+                ) : (
+                  <MarksTab
+                    gradesData={gradesData}
+                    setGradesData={setGradesData}
+                    cgpa={cgpa}
+                    setCgpa={setCgpa}
+                    savedUsername={data?.username}
+                    isBackgroundSyncing={isPortalSyncing}
+                  />
+                )
               ) : activeTab === 'fees' ? (
-                <FeeTab feeData={feeData} setFeeData={setFeeData} savedUsername={data?.username} />
+                !attendanceData ? (
+                  <div className="empty-state" style={{ marginTop: '4rem' }}>
+                    <p>Please log in to the student portal via the Attendance tab first.</p>
+                    <button onClick={() => setActiveTab('attendance')} className="primary-btn">Go to Attendance</button>
+                  </div>
+                ) : (
+                  <FeeTab feeData={feeData} setFeeData={setFeeData} savedUsername={data?.username} isBackgroundSyncing={isPortalSyncing} />
+                )
               ) : null}
 
               {activeTab === 'calendar' && (
-                <CalendarTab
-                  calendarData={calendarData}
-                  setCalendarData={setCalendarData}
-                  savedUsername={data?.username || ''}
-                />
+                !attendanceData ? (
+                  <div className="empty-state" style={{ marginTop: '4rem' }}>
+                    <p>Please log in to the student portal via the Attendance tab first.</p>
+                    <button onClick={() => setActiveTab('attendance')} className="primary-btn">Go to Attendance</button>
+                  </div>
+                ) : (
+                  <CalendarTab
+                    calendarData={calendarData}
+                    setCalendarData={setCalendarData}
+                    savedUsername={data?.username || ''}
+                    isBackgroundSyncing={isPortalSyncing}
+                  />
+                )
               )}
 
               {activeTab === 'calculator' && (
@@ -1043,7 +1099,9 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
         </div>
 
-      </main>
+          </main>
+        </>
+      )}
 
     </div>
   );

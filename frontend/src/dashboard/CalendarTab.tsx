@@ -9,6 +9,7 @@ interface CalendarTabProps {
   calendarData: any | null;
   setCalendarData: (data: any) => void;
   savedUsername?: string;
+  isBackgroundSyncing?: boolean;
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -93,35 +94,21 @@ const buildMonthGrid = (year: number, month: number, rows: any[]): DayCell[][] =
   return weeks;
 };
 
-const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData, savedUsername }) => {
+const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData, savedUsername, isBackgroundSyncing }) => {
   const [loading, setLoading] = useState(false);
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [initialSyncStarted, setInitialSyncStarted] = useState(false);
+
   const [captchaStatus, setCaptchaStatus] = useState<{ pending: boolean; base64: string | null }>({ pending: false, base64: null });
   const [captchaInput, setCaptchaInput] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [activeMonthIdx, setActiveMonthIdx] = useState(0);
 
   const username = savedUsername || '';
-  const netId = username.split('@')[0] || '';
 
   useEffect(() => {
-    let savedPortalPwd = localStorage.getItem('portal_password');
-    if (savedPortalPwd) {
-      setPassword(savedPortalPwd);
-    }
+    // Handled by backend
   }, []);
 
-  useEffect(() => {
-    if (!initialSyncStarted && netId) {
-      setInitialSyncStarted(true);
-      let savedPortalPwd = localStorage.getItem('portal_password');
-      if (savedPortalPwd) {
-        fetchCalendar(savedPortalPwd);
-      }
-    }
-  }, [initialSyncStarted, netId]);
+  // Auto-fetch is handled in background by Dashboard.tsx.
 
   const submitCaptcha = async () => {
     if (!captchaInput || !username) return;
@@ -194,13 +181,8 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!password) {
-      setError('Please enter your portal password.');
-      return;
-    }
-    await fetchCalendar(password);
+  const handleManualSync = async () => {
+    await fetchCalendar('');
   };
 
   // =========================
@@ -348,7 +330,7 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
           </div>
 
           <button
-            onClick={() => fetchCalendar(password)}
+            onClick={() => fetchCalendar('')}
             className="cal-sync-btn"
             disabled={loading}
           >
@@ -448,7 +430,7 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
           <div className="cal-empty-state">
             <p>No calendar data available for the current term.</p>
             <button
-              onClick={() => fetchCalendar(password)}
+              onClick={() => fetchCalendar('')}
               className="cal-primary-btn"
               disabled={loading}
             >
@@ -464,12 +446,12 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
   // NO DATA YET — SKELETON
   // =========================
 
-  if (loading) {
+  if (isBackgroundSyncing) {
     return <SkeletonLoader type="table" />;
   }
 
   // =========================
-  // LOGIN SCREEN
+  // DATA NOT FOUND SCREEN
   // =========================
 
   return (
@@ -477,19 +459,16 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
       {captchaModal}
 
       <section className="cal-login-card">
-        <span className="cal-eyebrow cal-login-eyebrow">Student Portal</span>
-        <h2 className="cal-login-title">Academic Calendar</h2>
+        <h2 className="cal-login-title">Data Not Found</h2>
 
         {loading ? (
           <div className="cal-loading-wrap">
-            <LoadingScreen message="Connecting & auto-solving captcha..." />
+            <LoadingScreen message="Fetching your calendar..." />
           </div>
         ) : (
           <>
             <p className="cal-login-copy">
-              The academic calendar is hosted on the SRM Student Portal.
-              <br />
-              Enter your password to fetch it.
+              Your academic calendar couldn't be loaded automatically. Click below to try fetching it again.
             </p>
 
             {error && (
@@ -498,63 +477,9 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
               </div>
             )}
 
-            <form onSubmit={handleLogin}>
-              <div className="cal-input-group">
-                <label>NetID</label>
-                <input
-                  type="text"
-                  className="cal-login-input cal-login-input-disabled"
-                  value={netId}
-                  disabled
-                />
-              </div>
-
-              <div className="cal-input-group">
-                <label>Portal Password</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    className="cal-login-input"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="Password"
-                    autoFocus
-                    style={{ paddingRight: '40px', width: '100%' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{ 
-                      position: 'absolute', 
-                      right: '12px', 
-                      background: 'none', 
-                      border: 'none', 
-                      color: 'var(--text-muted, #757D8F)', 
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: 0
-                    }}
-                  >
-                    {showPassword ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <button type="submit" className="cal-primary-btn cal-login-submit">
-                Login to Portal
-              </button>
-            </form>
+            <button type="button" className="cal-primary-btn cal-login-submit" onClick={handleManualSync}>
+              Sync Now
+            </button>
           </>
         )}
       </section>

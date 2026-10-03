@@ -7,22 +7,42 @@ interface SplashScreenProps {
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ theme = 'dark' }) => {
   const [progress, setProgress] = useState(0);
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  const messages = [
+    "Initializing Secure Environment...",
+    "Establishing secure connection...",
+    "Bypassing portal security...",
+    "Fetching profile data...",
+    "Syncing courses and timetable...",
+    "Almost there, finalizing data..."
+  ];
 
   useEffect(() => {
-    // Simulate progress for the splash screen
+    // Simulate progress that slows down as it approaches 99
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        // Random increment to make it feel "real"
-        const increment = Math.random() * 15;
-        return Math.min(prev + increment, 99); // max 99 until actually done
+        let increment = 0;
+        if (prev < 30) increment = Math.random() * 12;
+        else if (prev < 60) increment = Math.random() * 6;
+        else if (prev < 85) increment = Math.random() * 2;
+        else if (prev < 95) increment = Math.random() * 0.8;
+        else if (prev < 99.5) increment = Math.random() * 0.2;
+        
+        return Math.min(prev + increment, 99.9);
       });
-    }, 300);
+    }, 250);
 
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // Cycle through messages while waiting
+    const msgInterval = setInterval(() => {
+      setMessageIndex((prev) => Math.min(prev + 1, messages.length - 1));
+    }, 2500);
+
+    return () => clearInterval(msgInterval);
   }, []);
 
   return (
@@ -60,7 +80,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ theme = 'dark' }) => {
         <h1 className="splash-title">
           <span className="gradient-text">Academia</span>
         </h1>
-        <p className="splash-subtitle">Initializing Secure Environment...</p>
+        <div style={{ height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
+          <p className="splash-subtitle" style={{ margin: 0, animation: 'fadeInOut 2.5s ease-in-out infinite alternate' }}>
+            {messages[messageIndex]}
+          </p>
+        </div>
 
         {/* Premium Progress Bar */}
         <div className="splash-progress-container">
@@ -72,7 +96,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ theme = 'dark' }) => {
           </div>
         </div>
         <div className="splash-progress-text">
-          {Math.floor(progress)}%
+          {progress >= 99 ? '99' : Math.floor(progress)}%
         </div>
       </div>
       
