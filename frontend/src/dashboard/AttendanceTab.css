@@ -591,25 +591,106 @@
     .att-header {
         flex-direction: column;
         align-items: stretch;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .att-heading {
+        gap: 0.25rem;
     }
 
     .att-title {
-        font-size: 1.65rem;
+        font-size: 1.5rem;
+    }
+    
+    .att-subtitle {
+        font-size: 12.5px;
+    }
+
+    .att-stats {
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .att-stat-card {
+        padding: 0.6rem 0.75rem;
+    }
+
+    .att-stat-value {
+        font-size: 1.25rem;
+    }
+
+    .att-card {
+        padding: 0.25rem;
+    }
+
+    .att-list {
+        padding: 0.25rem 0.25rem 2.5rem 0.25rem;
+        gap: 0.4rem;
     }
 
     .att-row {
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.65rem;
+        padding: 0.85rem;
+        border-radius: 12px;
+    }
+
+    .att-row-info {
+        order: 1;
+        width: 100%;
+    }
+
+    .att-row-title {
+        font-size: 13px;
+        white-space: normal;
+        line-height: 1.4;
+    }
+
+    .att-row-side {
+        order: 2;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
         gap: 0.6rem;
+        width: 100%;
+        margin-top: -0.15rem;
     }
 
     .att-row-progress {
         order: 3;
-        flex: 1 1 100%;
+        width: 100%;
+        margin-top: 0.2rem;
     }
 
-    .att-row-side {
-        align-items: flex-end;
-        min-width: 0;
+    .att-meta-stats {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    
+    .att-stat-pill {
+        padding: 2px 6px;
+        font-size: 9px;
+    }
+
+    .att-badge {
+        font-size: 11px;
+        padding: 2px 7px;
+    }
+
+    .att-row-status {
+        font-size: 9.5px;
+        padding: 2px 6px;
+        margin-top: 0;
+    }
+    
+    .att-login-card {
+        padding: 1.25rem;
+    }
+    
+    .att-login-title {
+        font-size: 1.25rem;
     }
 }
 

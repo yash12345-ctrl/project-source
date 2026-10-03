@@ -315,21 +315,150 @@
 }
 
 /* ---------- Responsive ---------- */
+.cp-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+}
+
+.cp-page,
+.cp-card,
+.cp-heading {
+    min-width: 0;
+}
+
+/* Touch devices: no hover lift (it sticks after tapping) */
+@media (hover: none) {
+    .cp-card:hover {
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .cp-header {
+        margin-bottom: 1.25rem;
+        gap: 1rem;
+    }
+}
+
 @media (max-width: 640px) {
+
+    /* The top bar already shows "Course Page"; keep only the useful bits */
     .cp-header {
         flex-direction: column;
         align-items: stretch;
+        gap: 0.85rem;
+        margin-bottom: 1rem;
+    }
+
+    .cp-eyebrow {
+        font-size: 10px;
+    }
+
+    .cp-title {
+        font-size: 1.45rem;
+        margin-top: 0.1rem;
+    }
+
+    .cp-subtitle {
+        margin-top: 0.25rem;
+        font-size: 13px;
     }
 
     .cp-search {
         min-width: 0;
+        width: 100%;
     }
 
-    .cp-title {
-        font-size: 1.65rem;
+    .cp-search-input {
+        font-size: 16px; /* stops iOS zoom on focus */
+        padding: 0.85rem 1rem 0.85rem 2.6rem;
+        border-radius: 14px;
+        min-height: 48px;
     }
 
     .cp-grid {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+    }
+
+    .cp-card {
+        padding: 1.05rem 1rem 1rem 1.15rem;
+        border-radius: 18px;
+    }
+
+    .cp-card-top {
+        margin-bottom: 0.7rem;
+    }
+
+    .cp-course-title {
+        font-size: 16px;
+        margin-bottom: 0.85rem;
+    }
+
+    .cp-divider {
+        margin-bottom: 0.85rem;
+    }
+
+    /* Meta becomes tiles: Slot | Room, then Faculty full width */
+    .cp-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    .cp-meta-item {
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 0.35rem;
+        padding: 0.65rem 0.75rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--cp-border);
+        min-width: 0;
+    }
+
+    .cp-meta-item--wide {
+        grid-column: 1 / -1;
+        order: 3;
+    }
+
+    .cp-meta-item dt {
+        font-size: 10.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .cp-meta-item dd {
+        max-width: 100%;
+        width: 100%;
+        font-size: 13.5px;
+        color: var(--cp-text);
+        text-align: left;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.35;
+    }
+
+    .cp-empty {
+        padding: 3rem 1.25rem;
+        border-radius: 18px;
+    }
+
+    .cp-clear-btn {
+        min-height: 44px;
+        padding: 0.65rem 1.4rem;
+    }
+}
+
+@media (max-width: 640px) {
+    [data-theme='light'] .cp-meta-item {
+        background: rgba(0, 0, 0, 0.025);
+    }
+}
+
+@media (max-width: 360px) {
+    .cp-meta {
         grid-template-columns: 1fr;
     }
 }

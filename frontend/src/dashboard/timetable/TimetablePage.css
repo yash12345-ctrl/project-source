@@ -666,10 +666,329 @@ tr.tt-row-today .tt-slot {
     color: var(--tt-text-soft);
 }
 
+/* ---------- Day-order chip (replaces old inline styles) ---------- */
+.tt-dayorder-chip {
+    margin-left: 10px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--tt-text);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+[data-theme='light'] .tt-dayorder-chip {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.tt-page,
+.tt-heading,
+.tt-card {
+    min-width: 0;
+}
+
+/* ================================================================
+   PHONE GRID ("Fit to screen") - days as columns, never scrolls sideways
+   ================================================================ */
+.tt-mt {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 5px 6px;
+    font-size: 11px;
+}
+
+.tt-mt thead th {
+    padding: 0.4rem 0 0.35rem;
+    text-align: center;
+    color: var(--tt-text-soft);
+    font-weight: 600;
+    border-radius: 10px;
+    background: var(--tt-surface-soft);
+}
+
+.tt-mt thead th.tt-mt-today {
+    background: #34d399;
+    color: #05130d;
+}
+
+.tt-mt-day {
+    display: block;
+    font-size: 8.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.8;
+}
+
+.tt-mt-daynum {
+    display: block;
+    font-size: 14px;
+    line-height: 1.1;
+    font-weight: 700;
+}
+
+.tt-mt .tt-mt-corner {
+    width: 44px;
+    font-size: 8.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--tt-text-faint);
+    background: transparent;
+}
+
+.tt-mt-time {
+    width: 44px;
+    padding: 0;
+    text-align: center;
+    font-weight: 600;
+    font-size: 9.5px;
+    line-height: 1.25;
+    color: var(--tt-text);
+    background: transparent;
+}
+
+.tt-mt-time span {
+    display: block;
+}
+
+.tt-mt-time-end {
+    display: none;
+}
+
+.tt-mt-cell {
+    height: 42px;
+    padding: 0 1px;
+    border-radius: 11px;
+    text-align: center;
+    vertical-align: middle;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.12s ease, box-shadow 0.2s ease;
+}
+
+.tt-mt-free {
+    background: rgba(255, 255, 255, 0.018);
+}
+
+.tt-mt-free.tt-mt-today-col {
+    background: rgba(52, 211, 153, 0.045);
+}
+
+.tt-mt-filled {
+    background: var(--tt-accent-soft, rgba(52, 211, 153, 0.16));
+    box-shadow: none;
+    cursor: pointer;
+}
+
+.tt-mt-filled:active {
+    transform: scale(0.94);
+}
+
+.tt-mt-code {
+    display: block;
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.1px;
+    color: var(--tt-accent, #34d399);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+}
+
+.tt-mt-now {
+    box-shadow: 0 0 0 1.5px var(--tt-accent, #34d399);
+}
+
+.tt-mt-picked {
+    box-shadow: 0 0 0 2px var(--tt-text);
+}
+
+.tt-mt-hint {
+    margin: 0.7rem 0 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--tt-text-faint);
+}
+
+.tt-mt-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 0.7rem;
+    padding: 0.85rem 1rem;
+    border-radius: 16px;
+    background: var(--tt-accent-soft, rgba(52, 211, 153, 0.14));
+    box-shadow: inset 3px 0 0 var(--tt-accent, #34d399);
+    animation: tt-fade-in 0.25s ease;
+}
+
+.tt-mt-detail-when {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--tt-accent, #34d399);
+}
+
+.tt-mt-detail-title {
+    font-size: 15px;
+    color: var(--tt-text);
+    line-height: 1.3;
+}
+
+.tt-mt-detail-meta {
+    font-size: 12px;
+    color: var(--tt-text-soft);
+    line-height: 1.4;
+}
+
+[data-theme='light'] .tt-mt thead th {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme='light'] .tt-mt thead th.tt-mt-today {
+    background: #34d399;
+}
+
+[data-theme='light'] .tt-mt-free {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+/* Phone grid polish: sticky day header + a little more room */
+@media (max-width: 640px) {
+    .tt-card:has(.tt-mt) {
+        overflow: visible;
+        padding: 0.3rem 0.35rem 0.5rem;
+    }
+
+    .tt-mt thead th {
+        position: sticky;
+        top: calc(64px + env(safe-area-inset-top));
+        z-index: 6;
+        background: rgba(14, 17, 24, 0.94);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 6px 12px -8px rgba(0, 0, 0, 0.6);
+    }
+
+    .tt-mt thead th.tt-mt-today {
+        background: #34d399;
+    }
+
+    .tt-mt .tt-mt-corner {
+        background: rgba(14, 17, 24, 0.94);
+        box-shadow: none;
+    }
+
+    [data-theme='light'] .tt-mt thead th {
+        background: rgba(246, 243, 238, 0.96);
+        box-shadow: 0 6px 12px -8px rgba(0, 0, 0, 0.2);
+    }
+
+    [data-theme='light'] .tt-mt thead th.tt-mt-today {
+        background: #34d399;
+    }
+
+    [data-theme='light'] .tt-mt .tt-mt-corner {
+        background: rgba(246, 243, 238, 0.96);
+    }
+
+    .tt-mt-time {
+        font-size: 10px;
+        letter-spacing: 0.01em;
+    }
+
+    .tt-mt-detail {
+        position: sticky;
+        bottom: calc(96px + env(safe-area-inset-bottom));
+        z-index: 4;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        background:
+            linear-gradient(var(--tt-accent-soft, rgba(52, 211, 153, 0.2)), var(--tt-accent-soft, rgba(52, 211, 153, 0.2))),
+            #0e1118;
+        box-shadow: inset 3px 0 0 var(--tt-accent, #34d399), 0 14px 30px -12px rgba(0, 0, 0, 0.6);
+    }
+
+    [data-theme='light'] .tt-mt-detail {
+        background: #ffffff;
+        box-shadow: inset 3px 0 0 var(--tt-accent, #34d399), 0 10px 24px -10px rgba(0, 0, 0, 0.25);
+    }
+}
+
 /* ---------- Responsive ---------- */
+@media (hover: none) {
+
+    .tt-slot-filled:hover,
+    .tt-daylist-row-filled:hover {
+        transform: none;
+    }
+}
+
 @media (max-width: 900px) {
     .tt-mode-fit .tt-slot-room {
         display: none;
+    }
+
+    .tt-header {
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 640px) {
+
+    /* Overflow fix: the nowrap legend was forcing the whole header wider than the screen */
+    .tt-page,
+    .tt-header,
+    .tt-heading,
+    .tt-header-controls,
+    .tt-legend,
+    .tt-view-toggle {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .tt-header-controls {
+        width: 100%;
+    }
+
+    .tt-legend {
+        width: 100%;
+    }
+
+    .tt-toggle-btn {
+        min-width: 0;
+        padding: 0.4rem 0.5rem;
+    }
+
+    /* Free hours: slim, quiet rows so real classes stand out */
+    .tt-daylist-row:not(.tt-daylist-row-filled) {
+        align-items: center;
+        padding: 0.55rem 0.85rem;
+        background: transparent;
+        border-style: dashed;
+        gap: 0.8rem;
+    }
+
+    .tt-daylist-row:not(.tt-daylist-row-filled) .tt-daylist-time-range {
+        font-size: 11px;
+        opacity: 0.8;
+    }
+
+    .tt-daylist-row:not(.tt-daylist-row-filled) .tt-daylist-free {
+        font-size: 12px;
+    }
+
+    /* Classes: a bit more presence */
+    .tt-daylist-row-filled {
+        padding-top: 0.9rem;
+        padding-bottom: 0.9rem;
+    }
+
+    .tt-daylist-row-filled .tt-daylist-time-range {
+        color: var(--tt-text);
     }
 }
 
@@ -677,36 +996,157 @@ tr.tt-row-today .tt-slot {
     .tt-header {
         flex-direction: column;
         align-items: stretch;
+        gap: 0.85rem;
+        margin-bottom: 1rem;
+    }
+
+    .tt-eyebrow {
+        font-size: 10px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .tt-dayorder-chip {
+        margin-left: 0;
     }
 
     .tt-title {
-        font-size: 1.65rem;
+        font-size: 1.45rem;
+    }
+
+    .tt-subtitle {
+        font-size: 13px;
     }
 
     .tt-header-controls {
-        justify-content: space-between;
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 0.7rem;
     }
 
+    /* Legend: one swipeable row instead of a wrapped blob */
     .tt-legend {
-        border-radius: 12px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        border-radius: 14px;
+        scrollbar-width: none;
+        gap: 1rem;
     }
 
-    /* Below this width even the fixed layout gets cramped, so fall back to scroll */
+    .tt-legend::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Full-width segmented toggle with real touch targets */
+    .tt-view-toggle {
+        display: flex;
+        width: 100%;
+    }
+
+    .tt-toggle-btn {
+        flex: 1;
+        justify-content: center;
+        min-height: 42px;
+        font-size: 13px;
+    }
+
+    .tt-card {
+        border-radius: 20px;
+        padding: 0.35rem;
+    }
+
+    /* Grid fallback: horizontal scroll with sticky day column */
     .tt-table-scroll.tt-mode-fit {
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .tt-table-scroll.tt-mode-fit .tt-matrix {
         table-layout: auto;
-        min-width: 640px;
+        min-width: 720px;
+    }
+
+    .tt-matrix th.tt-corner {
+        width: 78px;
+    }
+
+    /* ----- Day view ----- */
+    .tt-daylist-nav {
+        padding: 0.5rem 0.4rem 0.7rem;
+    }
+
+    .tt-daylist-nav-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .tt-daylist-nav-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .tt-daylist-current-name {
+        font-size: 1.2rem;
+    }
+
+    .tt-daylist-pills {
+        gap: 0.5rem;
+        padding: 0.1rem 0.4rem 0.8rem;
+        scroll-snap-type: x proximity;
+    }
+
+    .tt-daylist-pill {
+        font-size: 12.5px;
+        padding: 0.55rem 0.95rem;
+        min-height: 38px;
+        scroll-snap-align: center;
+    }
+
+    .tt-daylist-body {
+        gap: 0.6rem;
+        padding: 0.15rem 0.3rem 0.4rem;
+        touch-action: pan-y;
     }
 
     .tt-daylist-row {
-        padding: 0.65rem 0.75rem;
+        gap: 0.8rem;
+        padding: 0.8rem 0.85rem;
+        border-radius: 15px;
     }
 
     .tt-daylist-time {
-        min-width: 68px;
+        min-width: 74px;
+    }
+
+    .tt-daylist-time-range {
+        font-size: 11.5px;
+    }
+
+    .tt-daylist-title {
+        font-size: 14.5px;
+    }
+
+    .tt-daylist-meta {
+        font-size: 12px;
+    }
+
+    .tt-empty {
+        padding: 3rem 1.25rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .tt-daylist-row {
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .tt-daylist-time {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
     }
 }
 

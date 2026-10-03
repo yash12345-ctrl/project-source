@@ -154,7 +154,23 @@ const ChevronRight = () => (
 );
 
 const TimetablePage: React.FC<TimetablePageProps> = ({ timetableGrid, courses, todayDayOrder }) => {
-    const [viewMode, setViewMode] = useState<ViewMode>('fit');
+    // Phones get the day-by-day list by default (a 12-column grid is unreadable there)
+    const [viewMode, setViewMode] = useState<ViewMode>(() =>
+        typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches ? 'scroll' : 'fit'
+    );
+    const touchStart = React.useRef<{ x: number; y: number } | null>(null);
+
+    // Track phone width so the weekly grid can use a layout that fits without sideways scrolling
+    const [isMobile, setIsMobile] = useState<boolean>(
+        () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches
+    );
+    React.useEffect(() => {
+        const mq = window.matchMedia('(max-width: 640px)');
+        const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        mq.addEventListener('change', onChange);
+        return () => mq.removeEventListener('change', onChange);
+    }, []);
+    const [picked, setPicked] = useState<{ d: number; i: number } | null>(null);
 
     const days = useMemo(() => (timetableGrid ? Object.keys(timetableGrid) : []), [timetableGrid]);
     const hasGrid = days.length > 0;
@@ -252,6 +268,31 @@ const TimetablePage: React.FC<TimetablePageProps> = ({ timetableGrid, courses, t
     const goPrevDay = () => setSelectedDayIdx((i) => (days.length ? (i - 1 + days.length) % days.length : 0));
     const goNextDay = () => setSelectedDayIdx((i) => (days.length ? (i + 1) % days.length : 0));
 
+    // Keep the active day pill centered in its scroller
+    React.useEffect(() => {
+        if (viewMode !== 'scroll') return;
+        const el = document.querySelector('.tt-daylist-pill-active') as HTMLElement | null;
+        el?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    }, [safeIdx, viewMode]);
+
+    // Swipe left/right on the day list to change day
+    const onTouchStart = (e: React.TouchEvent) => {
+        const t = e.touches[0];
+        touchStart.current = { x: t.clientX, y: t.clientY };
+    };
+    const onTouchEnd = (e: React.TouchEvent) => {
+        const start = touchStart.current;
+        touchStart.current = null;
+        if (!start) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - start.x;
+        const dy = t.clientY - start.y;
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            if (dx < 0) goNextDay();
+            else goPrevDay();
+        }
+    };
+
     return (
         <div className="tt-page">
             <header className="tt-header">
@@ -259,7 +300,7 @@ const TimetablePage: React.FC<TimetablePageProps> = ({ timetableGrid, courses, t
                     <span className="tt-eyebrow">
                         Weekly Overview
                         {todayDayOrder && (
-                            <span style={{ marginLeft: '12px', padding: '2px 8px', borderRadius: '4px', backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#fff', fontWeight: 600 }}>
+                            <span className="tt-dayorder-chip">
                                 Day Order {todayDayOrder.replace(/day/i, '').trim()}
                             </span>
                         )}
@@ -319,7 +360,94 @@ const TimetablePage: React.FC<TimetablePageProps> = ({ timetableGrid, courses, t
                 </div>
             )}
 
-            {hasGrid && viewMode === 'fit' && (
+            {hasGrid && viewMode === 'fit' && isMobile && (
+                <>
+                    <div className="tt-card">
+                        <table className="tt-mt">
+                            <thead>
+                                <tr>
+                                    <th className="tt-mt-corner">Time</th>
+                                    {rows.map(({ day }) => {
+                                        const num = day.replace(/day\s*(order)?\s*/i, '').trim();
+                                        return (
+                                            <th key={day} className={isToday(day) ? 'tt-mt-today' : ''}>
+                                                <span className="tt-mt-day">{num && num !== day ? 'Day' : day.slice(0, 3)}</span>
+                                                <span className="tt-mt-daynum">{num && num !== day ? num : ''}</span>
+                                            </th>
+                                        );
+                                    })}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {times.map((time, i) => {
+                                    const [start, end] = time.split(/[-–—]/).map((s) => s.trim());
+                                    return (
+                                        <tr key={i}>
+                                            <th className="tt-mt-time" scope="row">
+                                                <span>{start}</span>
+                                                <span className="tt-mt-time-end">{end}</span>
+                                            </th>
+                                            {rows.map(({ day, cells }, d) => {
+                                                const entry = cells[i];
+                                                const course = entry?.matchedCourse;
+                                                const accent = getAccent(course?.type);
+                                                const now = !!course && isToday(day) && isSlotNow(entry.cell.time);
+                                                const active = picked?.d === d && picked?.i === i;
+                                                return (
+                                                    <td
+                                                        key={day}
+                                                        className={[
+                                                            'tt-mt-cell',
+                                                            course ? 'tt-mt-filled' : 'tt-mt-free',
+                                                            isToday(day) ? 'tt-mt-today-col' : '',
+                                                            now ? 'tt-mt-now' : '',
+                                                            active ? 'tt-mt-picked' : '',
+                                                        ].filter(Boolean).join(' ')}
+                                                        style={
+                                                            course
+                                                                ? ({ '--tt-accent': accent.main, '--tt-accent-soft': accent.soft } as React.CSSProperties)
+                                                                : undefined
+                                                        }
+                                                        onClick={course ? () => setPicked(active ? null : { d, i }) : undefined}
+                                                    >
+                                                        {course && (
+                                                            <span className="tt-mt-code">{course.code || shortLabel(course)}</span>
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {(() => {
+                        const course = picked ? rows[picked.d]?.cells[picked.i]?.matchedCourse : undefined;
+                        if (!picked || !course) {
+                            return <p className="tt-mt-hint">Tap a class to see its details</p>;
+                        }
+                        const accent = getAccent(course.type);
+                        return (
+                            <div
+                                className="tt-mt-detail"
+                                style={{ '--tt-accent': accent.main, '--tt-accent-soft': accent.soft } as React.CSSProperties}
+                            >
+                                <span className="tt-mt-detail-when">
+                                    {formatDayName(rows[picked.d].day)} · {rows[picked.d].cells[picked.i].cell.time}
+                                </span>
+                                <strong className="tt-mt-detail-title">{course.title || course.code}</strong>
+                                <span className="tt-mt-detail-meta">
+                                    {[course.code, course.type, course.room, course.faculty].filter(Boolean).join(' · ')}
+                                </span>
+                            </div>
+                        );
+                    })()}
+                </>
+            )}
+
+            {hasGrid && viewMode === 'fit' && !isMobile && (
                 <div className="tt-card">
                     <div className="tt-table-scroll tt-mode-fit">
                         <table className="tt-matrix">
@@ -430,7 +558,7 @@ const TimetablePage: React.FC<TimetablePageProps> = ({ timetableGrid, courses, t
                             </div>
                         )}
 
-                        <div className="tt-daylist-body">
+                        <div className="tt-daylist-body" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
                             {currentDayCells.map(({ cell, matchedCourse }, idx) => {
                                 const accent = getAccent(matchedCourse?.type);
                                 const dayIsToday = isToday(currentDay);

@@ -162,7 +162,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses }) => {
                                             <dt><ClockIcon /><span>Slot</span></dt>
                                             <dd>{course.slot || 'N/A'}</dd>
                                         </div>
-                                        <div className="cp-meta-item">
+                                        <div className="cp-meta-item cp-meta-item--wide">
                                             <dt><UserIcon /><span>Faculty</span></dt>
                                             <dd>{course.faculty || 'N/A'}</dd>
                                         </div>
