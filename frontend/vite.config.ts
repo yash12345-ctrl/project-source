@@ -21,8 +21,8 @@ export default defineConfig({
         suppressWarnings: true
       },
       manifest: {
-        name: 'Academia',
-        short_name: 'Academia',
+        name: 'Source Code',
+        short_name: 'Source Code',
         description: 'Academia Student Portal',
         theme_color: '#1e40af',
         background_color: '#f8fafc',

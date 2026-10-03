@@ -75,13 +75,13 @@ const InstallPwaPopup: React.FC = () => {
         
         <div className="pwa-popup-content">
           <div className="pwa-popup-logo-wrapper">
-            <img src="/logo.jpeg" alt="Academia App" className="pwa-popup-logo" />
+            <img src="/logo.jpeg" alt="Source Code App" className="pwa-popup-logo" />
             <div className="pwa-popup-logo-glow"></div>
           </div>
           
           <div className="pwa-popup-text">
             <h3>Premium App Experience</h3>
-            <p>Install Academia to your home screen for instant access and a seamless native feel.</p>
+            <p>Install Source Code to your home screen for instant access and a seamless native feel.</p>
           </div>
           
           <button className="pwa-popup-install-btn" onClick={handleInstallClick}>
