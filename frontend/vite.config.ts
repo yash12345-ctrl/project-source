@@ -29,25 +29,25 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: '/pwa-192x192.png',
+            src: '/logo.jpeg',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/jpeg'
           },
           {
-            src: '/pwa-512x512.png',
+            src: '/logo.jpeg',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/jpeg'
           },
           {
-            src: '/pwa-512x512.png',
+            src: '/logo.jpeg',
             sizes: '512x512',
-            type: 'image/png',
+            type: 'image/jpeg',
             purpose: 'any maskable'
           }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,jpeg,jpg}']
       }
     })
   ]
