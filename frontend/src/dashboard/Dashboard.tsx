@@ -76,6 +76,11 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
   const [attendanceData, setAttendanceData] =
     useState<any[] | null>(() => {
+      if (location.state?.data?.attendance) {
+        localStorage.setItem('academia_attendance', JSON.stringify(location.state.data.attendance));
+        localStorage.setItem('academia_attendance_user', sessionUsername);
+        return location.state.data.attendance;
+      }
 
       const cached =
         localStorage.getItem('academia_attendance');
@@ -107,6 +112,11 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
   const [gradesData, setGradesData] =
     useState<any[] | null>(() => {
+      if (location.state?.data?.grades) {
+        localStorage.setItem('academia_grades', JSON.stringify(location.state.data.grades));
+        localStorage.setItem('academia_grades_user', sessionUsername);
+        return location.state.data.grades;
+      }
 
       const cached =
         localStorage.getItem('academia_grades');
@@ -147,6 +157,12 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
   const [internalMarksData, setInternalMarksData] =
     useState<any[] | null>(() => {
+      if (location.state?.data?.internalMarks) {
+        localStorage.setItem('academia_internalmarks', JSON.stringify(location.state.data.internalMarks));
+        localStorage.setItem('academia_internalmarks_user', sessionUsername);
+        return location.state.data.internalMarks;
+      }
+      
       const cached = localStorage.getItem('academia_internalmarks');
       const cachedUser = localStorage.getItem('academia_internalmarks_user');
       const creds = JSON.stringify({ username: sessionUsername });
@@ -170,6 +186,10 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
   const [cgpa, setCgpa] =
     useState<string | null>(() => {
+      if (location.state?.data?.cgpa) {
+        localStorage.setItem('academia_cgpa', location.state.data.cgpa);
+        return location.state.data.cgpa;
+      }
 
       const cachedUser =
         localStorage.getItem('academia_grades_user');
@@ -201,6 +221,11 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
   const [feeData, setFeeData] =
     useState<any | null>(() => {
+      if (location.state?.data?.fees) {
+        localStorage.setItem('academia_fees', JSON.stringify(location.state.data.fees));
+        localStorage.setItem('academia_fees_user', sessionUsername);
+        return location.state.data.fees;
+      }
 
       const cached =
         localStorage.getItem('academia_fees');
@@ -232,6 +257,11 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
   const [calendarData, setCalendarData] =
     useState<any | null>(() => {
+      if (location.state?.data?.calendar) {
+        localStorage.setItem('academia_calendar', JSON.stringify(location.state.data.calendar));
+        localStorage.setItem('academia_calendar_user', sessionUsername);
+        return location.state.data.calendar;
+      }
 
       const cached =
         localStorage.getItem('academia_calendar');
@@ -824,6 +854,9 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
       'academia_calendar_user'
     );
 
+    localStorage.removeItem('academia_internalmarks');
+    localStorage.removeItem('academia_internalmarks_user');
+
     localStorage.removeItem(
       'portal_password'
     );
@@ -1126,6 +1159,15 @@ const Dashboard: React.FC = () => {
     .then(res => res.json())
     .then(data => {
       if (data.success) {
+        // Heal caches poisoned by an earlier bug where the owner key was saved as "null"/"undefined".
+        // Runs before DashboardInner mounts so its state initializers see clean storage.
+        ['attendance', 'grades', 'fees', 'calendar', 'internalmarks'].forEach((k) => {
+          const owner = localStorage.getItem(`academia_${k}_user`);
+          if (owner === 'null' || owner === 'undefined' || owner === '') {
+            localStorage.removeItem(`academia_${k}_user`);
+            localStorage.removeItem(`academia_${k}`);
+          }
+        });
         setSessionUsername(data.username);
       } else {
         localStorage.removeItem('session_token');
