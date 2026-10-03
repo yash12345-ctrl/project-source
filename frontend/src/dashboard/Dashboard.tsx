@@ -403,6 +403,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
         if (res.success) {
           setGradesData(res.semesters || []);
           localStorage.setItem('academia_grades', JSON.stringify(res.semesters || []));
+          localStorage.setItem('academia_grades_user', sessionUsername);
           if (res.cgpa) setCgpa(res.cgpa);
         }
       });
@@ -410,18 +411,21 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
         if (res.success) {
           setFeeData(res);
           localStorage.setItem('academia_fees', JSON.stringify(res));
+          localStorage.setItem('academia_fees_user', sessionUsername);
         }
       });
       const p3 = fetchWithToken('/api/calendar/login').then(res => {
         if (res.success) {
           setCalendarData(res);
           localStorage.setItem('academia_calendar', JSON.stringify(res));
+          localStorage.setItem('academia_calendar_user', sessionUsername);
         }
       });
       const p4 = fetchWithToken('/api/internal-marks/login').then(res => {
         if (res.success) {
           setInternalMarksData(res.marks || []);
           localStorage.setItem('academia_internalmarks', JSON.stringify(res.marks || []));
+          localStorage.setItem('academia_internalmarks_user', sessionUsername);
         }
       });
 
