@@ -20,7 +20,7 @@
   border: 1px solid var(--border-light, #e0e0e0);
   border-radius: 24px;
   padding: 1.5rem;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2), 0 0 20px rgba(var(--primary-color-rgb, 100, 100, 100), 0.1);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2), 0 0 20px rgba(170, 59, 255, 0.1);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   pointer-events: auto;
@@ -35,7 +35,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent, #aa3bff), transparent);
   opacity: 0.8;
 }
 
@@ -93,7 +93,7 @@
   width: 120%;
   height: 120%;
   border-radius: 50%;
-  background: var(--primary-color);
+  background: var(--accent, #aa3bff);
   filter: blur(15px);
   opacity: 0.3;
   z-index: 1;
@@ -122,7 +122,7 @@
   gap: 0.5rem;
   width: 100%;
   padding: 0.85rem;
-  background: linear-gradient(135deg, var(--primary-color), #8a2be2);
+  background: linear-gradient(135deg, var(--accent, #aa3bff), #8a2be2);
   color: white;
   border: none;
   border-radius: 14px;
@@ -130,7 +130,7 @@
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(var(--primary-color-rgb), 0.3);
+  box-shadow: 0 4px 12px rgba(170, 59, 255, 0.3);
 }
 
 .pwa-popup-install-btn:active {
