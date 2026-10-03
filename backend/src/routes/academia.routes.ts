@@ -5,8 +5,40 @@ import { syncQueue } from '../jobs/syncWorker';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { scrapeAcademia } from '../scraper/academia.scraper';
 import { registerUserForBackgroundSync } from '../scraper/data.cron';
-import { getRedisClient, isRedisReady } from '../db/redis';
+import { getRedisClient, isRedisReady, cacheGet } from '../db/redis';
 import { enqueueScrapeJob } from '../queue/scraperQueue';
+
+// Helper to assemble full payload from DB + individual Redis caches
+async function getEnrichedCachedData(username: string) {
+  const cached = await prisma.scrapedData.findUnique({ where: { username_type: { username, type: 'full_result' } } });
+  if (!cached) return null;
+  
+  const parsedData = JSON.parse(cached.data);
+  
+  if (isRedisReady()) {
+    try {
+      const attCache = await cacheGet<any>(`attendance:${username}`);
+      if (attCache?.attendance) parsedData.attendance = attCache.attendance;
+      
+      const gradesCache = await cacheGet<any>(`grades:${username}`);
+      if (gradesCache?.marks) parsedData.grades = gradesCache.marks;
+      if (gradesCache?.cgpa) parsedData.cgpa = gradesCache.cgpa;
+      
+      const feesCache = await cacheGet<any>(`fees:${username}`);
+      if (feesCache?.fees) parsedData.fees = feesCache.fees;
+      
+      const imCache = await cacheGet<any>(`internalmarks:${username}`);
+      if (imCache?.internalMarks) parsedData.internalMarks = imCache.internalMarks;
+      
+      const calCache = await cacheGet<any>(`calendar:${username}`);
+      if (calCache?.calendar) parsedData.calendar = calCache.calendar;
+    } catch (e) {
+      console.error('[Academia Routes] Error enriching cached data from Redis:', e);
+    }
+  }
+  
+  return parsedData;
+}
 
 const router = Router();
 
@@ -298,9 +330,9 @@ router.get('/sync-status', async (req: Request, res: Response): Promise<void> =>
         response.sessionToken = generateSessionToken(username, account.token_version);
       }
     }
-    const cached = await prisma.scrapedData.findUnique({ where: { username_type: { username, type: 'full_result' } } });
-    if (cached) {
-      Object.assign(response, JSON.parse(cached.data));
+    const enrichedData = await getEnrichedCachedData(username);
+    if (enrichedData) {
+      Object.assign(response, enrichedData);
     }
   }
 
@@ -310,14 +342,14 @@ router.get('/sync-status', async (req: Request, res: Response): Promise<void> =>
 // Protect cached data endpoints
 router.get('/cached', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   const username = req.user?.username;
-  const cached = await prisma.scrapedData.findUnique({ where: { username_type: { username: username!, type: 'full_result' } } });
+  const enrichedData = await getEnrichedCachedData(username!);
 
-  if (!cached) {
+  if (!enrichedData) {
     res.status(404).json({ success: false, error: 'No data found' });
     return;
   }
 
-  res.json(JSON.parse(cached.data));
+  res.json(enrichedData);
 });
 
 router.get('/me', (req: Request, res: Response) => {

@@ -17,6 +17,7 @@ import CalendarTab from './CalendarTab';
 import CalculatorTab from './CalculatorTab';
 import ComingSoon from './coming_soon/ComingSoon';
 import SplashScreen from './splash_screen/SplashScreen';
+import InstallPwaPopup from './popup/InstallPwaPopup';
 import Sem1 from './Sem1';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { useTheme } from '../context/ThemeContext';
@@ -1179,6 +1180,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
         </>
       )}
 
+      <InstallPwaPopup />
     </div>
   );
 };
