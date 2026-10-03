@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, CalendarCheck, TrendingUp, GraduationCap, ShieldCheck, User, Lock } from 'lucide-react';
 import './Login.css';
 import SplashScreen from '../dashboard/splash_screen/SplashScreen';
 
@@ -77,23 +77,38 @@ const Login: React.FC = () => {
         {/* Left Side: Branding & Marketing */}
         <div className="marketing-side">
           <div className="brand-logo">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="premium-icon">
-              <path d="M3 16L4.5 4L12 10L19.5 4L21 16H3Z" fill="url(#premium-gold)" />
-              <rect x="3" y="18" width="18" height="2.5" fill="url(#premium-gold)" />
-              <defs>
-                <linearGradient id="premium-gold" x1="3" y1="4" x2="21" y2="20.5" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#FDE047" />
-                  <stop offset="0.5" stopColor="#F59E0B" />
-                  <stop offset="1" stopColor="#D97706" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <span className="brand-name">Source Code</span>
+            <div className="brand-badge">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="premium-icon" aria-hidden="true">
+                <defs>
+                  <linearGradient id="premium-gold" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#FEF3C7" />
+                    <stop offset="0.4" stopColor="#FBBF24" />
+                    <stop offset="1" stopColor="#B45309" />
+                  </linearGradient>
+                </defs>
+                <path d="M2.5 8.5L7 12L12 5L17 12L21.5 8.5L19.5 17H4.5L2.5 8.5Z" fill="url(#premium-gold)" stroke="#FDE68A" strokeWidth="0.6" strokeLinejoin="round" />
+                <rect x="4.5" y="18.5" width="15" height="2" rx="1" fill="url(#premium-gold)" />
+                <circle cx="2.5" cy="8.5" r="1.3" fill="#FEF3C7" />
+                <circle cx="12" cy="5" r="1.3" fill="#FEF3C7" />
+                <circle cx="21.5" cy="8.5" r="1.3" fill="#FEF3C7" />
+              </svg>
+            </div>
+            <div className="brand-text">
+              <span className="brand-name">Source Code</span>
+              <span className="brand-tagline">Student Portal</span>
+            </div>
           </div>
 
+
           <div className="marketing-text">
-            <h1>Master your skills<br />with the best platform.</h1>
-            <p>Join thousands of students accessing world-class education from top universities and institutions.</p>
+            <h1>Every class counted.<span className="gradient-text">Every mark, clearly yours.</span></h1>
+            <p>Your attendance, internal marks and academic record, always one tap away.</p>
+
+            <ul className="feature-list">
+              <li><CalendarCheck size={18} /><span>Live attendance</span></li>
+              <li><TrendingUp size={18} /><span>Marks &amp; progress</span></li>
+              <li><GraduationCap size={18} /><span>Academic details</span></li>
+            </ul>
           </div>
         </div>
 
@@ -102,11 +117,11 @@ const Login: React.FC = () => {
           <div className="glass-panel">
             <div className="form-header">
               <h2>Welcome Back</h2>
-              <p>Please enter your details to sign in.</p>
+              <p>Sign in to view your attendance and academic details.</p>
             </div>
 
             {error && (
-              <div className="error-message">
+              <div className="error-message" role="alert">
                 {error}
               </div>
             )}
@@ -114,43 +129,38 @@ const Login: React.FC = () => {
             <form className="login-form" onSubmit={handleSubmit}>
               <div className="input-group">
                 <label htmlFor="email">Username</label>
-                <input
-                  type="text"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your username"
-                  required
-                />
+                <div className="input-wrap">
+                  <User size={18} className="input-icon" />
+                  <input
+                    type="text"
+                    id="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your username"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="input-group">
                 <label htmlFor="password">Password</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <div className="input-wrap">
+                  <Lock size={18} className="input-icon" />
                   <input
                     type={showPassword ? "text" : "password"}
                     id="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
+                    autoComplete="current-password"
                     required
-                    style={{ paddingRight: '40px', width: '100%' }}
                   />
                   <button
                     type="button"
+                    className="toggle-password"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={{ 
-                      position: 'absolute', 
-                      right: '12px', 
-                      background: 'none', 
-                      border: 'none', 
-                      color: 'var(--text-muted, #757D8F)', 
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: 0
-                    }}
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -161,6 +171,8 @@ const Login: React.FC = () => {
               <button type="submit" className="login-button" disabled={loading}>
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
+
+              <p className="secure-note"><ShieldCheck size={14} /> Your credentials are sent securely and never stored.</p>
             </form>
           </div>
         </div>
