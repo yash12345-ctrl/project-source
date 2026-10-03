@@ -435,6 +435,45 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
     }
   };
 
+  // Helper to safely apply full payload to all individual tab states
+  const applyFullPayload = (payload: any) => {
+    if (!payload) return;
+    
+    if (payload.profile) {
+      setData(payload);
+      localStorage.setItem('academia_data', JSON.stringify(payload));
+    }
+    if (payload.attendance) {
+      setAttendanceData(payload.attendance);
+      localStorage.setItem('academia_attendance', JSON.stringify(payload.attendance));
+      localStorage.setItem('academia_attendance_user', sessionUsername);
+    }
+    if (payload.grades) {
+      setGradesData(payload.grades);
+      localStorage.setItem('academia_grades', JSON.stringify(payload.grades));
+      localStorage.setItem('academia_grades_user', sessionUsername);
+      if (payload.cgpa) {
+        setCgpa(String(payload.cgpa));
+        localStorage.setItem('academia_cgpa', String(payload.cgpa));
+      }
+    }
+    if (payload.internalMarks) {
+      setInternalMarksData(payload.internalMarks);
+      localStorage.setItem('academia_internalmarks', JSON.stringify(payload.internalMarks));
+      localStorage.setItem('academia_internalmarks_user', sessionUsername);
+    }
+    if (payload.fees) {
+      setFeeData(payload.fees);
+      localStorage.setItem('academia_fees', JSON.stringify(payload.fees));
+      localStorage.setItem('academia_fees_user', sessionUsername);
+    }
+    if (payload.calendar) {
+      setCalendarData(payload.calendar);
+      localStorage.setItem('academia_calendar', JSON.stringify(payload.calendar));
+      localStorage.setItem('academia_calendar_user', sessionUsername);
+    }
+  };
+
   // ==========================================
   // POLL SYNC STATUS
   // ==========================================
@@ -490,10 +529,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
             localStorage.setItem('session_token', data.sessionToken);
           }
           if (!isSyncing) {
-            if (data.profile) {
-              setData(data);
-              localStorage.setItem('academia_data', JSON.stringify(data));
-            }
+            applyFullPayload(data);
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
               pollIntervalRef.current = null;
@@ -533,10 +569,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
         })
         .then(res => res.json())
         .then(cachedData => {
-          if (cachedData && cachedData.profile) {
-            setData(cachedData);
-            localStorage.setItem('academia_data', JSON.stringify(cachedData));
-          }
+          applyFullPayload(cachedData);
         })
         .catch(() => {});
       }
