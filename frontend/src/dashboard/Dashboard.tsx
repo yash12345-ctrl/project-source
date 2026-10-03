@@ -77,31 +77,35 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
   const [attendanceData, setAttendanceData] =
     useState<any[] | null>(() => {
-      if (location.state?.data?.attendance) {
-        localStorage.setItem('academia_attendance', JSON.stringify(location.state.data.attendance));
-        localStorage.setItem('academia_attendance_user', sessionUsername);
-        return location.state.data.attendance;
-      }
+      const cached = localStorage.getItem('academia_attendance');
+      const cachedUser = localStorage.getItem('academia_attendance_user');
+      const creds = JSON.stringify({ username: sessionUsername });
 
-      const cached =
-        localStorage.getItem('academia_attendance');
-
-      const cachedUser =
-        localStorage.getItem('academia_attendance_user');
-
-      const creds =
-        JSON.stringify({ username: sessionUsername });
-
+      let localData = null;
       if (cached && cachedUser && creds) {
         try {
           const { username } = JSON.parse(creds);
-
           if (username === cachedUser) {
-            return JSON.parse(cached);
+            localData = JSON.parse(cached);
           }
         } catch (e) {
           // Ignore invalid cached data
         }
+      }
+
+      const locData = location.state?.data?.attendance;
+      if (locData && locData.length > 0) {
+        localStorage.setItem('academia_attendance', JSON.stringify(locData));
+        localStorage.setItem('academia_attendance_user', sessionUsername);
+        return locData;
+      }
+
+      if (localData) return localData;
+
+      if (locData) {
+        localStorage.setItem('academia_attendance', JSON.stringify(locData));
+        localStorage.setItem('academia_attendance_user', sessionUsername);
+        return locData;
       }
 
       return null;
@@ -113,40 +117,38 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
   const [gradesData, setGradesData] =
     useState<any[] | null>(() => {
-      if (location.state?.data?.grades) {
-        localStorage.setItem('academia_grades', JSON.stringify(location.state.data.grades));
-        localStorage.setItem('academia_grades_user', sessionUsername);
-        return location.state.data.grades;
-      }
+      const cached = localStorage.getItem('academia_grades');
+      const cachedUser = localStorage.getItem('academia_grades_user');
+      const creds = JSON.stringify({ username: sessionUsername });
 
-      const cached =
-        localStorage.getItem('academia_grades');
-
-      const cachedUser =
-        localStorage.getItem('academia_grades_user');
-
-      const creds =
-        JSON.stringify({ username: sessionUsername });
-
+      let localData = null;
       if (cached && cachedUser && creds) {
         try {
           const { username } = JSON.parse(creds);
-
           if (username === cachedUser) {
             const parsed = JSON.parse(cached);
-
-            if (
-              parsed.length > 0 &&
-              !parsed[0].courses
-            ) {
-              return null;
+            if (!(parsed.length > 0 && !parsed[0].courses)) {
+              localData = parsed;
             }
-
-            return parsed;
           }
         } catch (e) {
           // Ignore invalid cached data
         }
+      }
+
+      const locData = location.state?.data?.grades;
+      if (locData && locData.length > 0) {
+        localStorage.setItem('academia_grades', JSON.stringify(locData));
+        localStorage.setItem('academia_grades_user', sessionUsername);
+        return locData;
+      }
+
+      if (localData) return localData;
+
+      if (locData) {
+        localStorage.setItem('academia_grades', JSON.stringify(locData));
+        localStorage.setItem('academia_grades_user', sessionUsername);
+        return locData;
       }
 
       return null;
@@ -158,26 +160,37 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
   const [internalMarksData, setInternalMarksData] =
     useState<any[] | null>(() => {
-      if (location.state?.data?.internalMarks) {
-        localStorage.setItem('academia_internalmarks', JSON.stringify(location.state.data.internalMarks));
-        localStorage.setItem('academia_internalmarks_user', sessionUsername);
-        return location.state.data.internalMarks;
-      }
-      
       const cached = localStorage.getItem('academia_internalmarks');
       const cachedUser = localStorage.getItem('academia_internalmarks_user');
       const creds = JSON.stringify({ username: sessionUsername });
 
+      let localData = null;
       if (cached && cachedUser && creds) {
         try {
           const { username } = JSON.parse(creds);
           if (username === cachedUser) {
-            return JSON.parse(cached);
+            localData = JSON.parse(cached);
           }
         } catch (e) {
           // Ignore
         }
       }
+
+      const locData = location.state?.data?.internalMarks;
+      if (locData && locData.length > 0) {
+        localStorage.setItem('academia_internalmarks', JSON.stringify(locData));
+        localStorage.setItem('academia_internalmarks_user', sessionUsername);
+        return locData;
+      }
+
+      if (localData) return localData;
+
+      if (locData) {
+        localStorage.setItem('academia_internalmarks', JSON.stringify(locData));
+        localStorage.setItem('academia_internalmarks_user', sessionUsername);
+        return locData;
+      }
+
       return null;
     });
 
@@ -222,31 +235,35 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
   const [feeData, setFeeData] =
     useState<any | null>(() => {
-      if (location.state?.data?.fees) {
-        localStorage.setItem('academia_fees', JSON.stringify(location.state.data.fees));
-        localStorage.setItem('academia_fees_user', sessionUsername);
-        return location.state.data.fees;
-      }
+      const cached = localStorage.getItem('academia_fees');
+      const cachedUser = localStorage.getItem('academia_fees_user');
+      const creds = JSON.stringify({ username: sessionUsername });
 
-      const cached =
-        localStorage.getItem('academia_fees');
-
-      const cachedUser =
-        localStorage.getItem('academia_fees_user');
-
-      const creds =
-        JSON.stringify({ username: sessionUsername });
-
+      let localData = null;
       if (cached && cachedUser && creds) {
         try {
           const { username } = JSON.parse(creds);
-
           if (username === cachedUser) {
-            return JSON.parse(cached);
+            localData = JSON.parse(cached);
           }
         } catch (e) {
-          // Ignore invalid cached data
+          // Ignore
         }
+      }
+
+      const locData = location.state?.data?.fees;
+      if (locData && Object.keys(locData).length > 0) {
+        localStorage.setItem('academia_fees', JSON.stringify(locData));
+        localStorage.setItem('academia_fees_user', sessionUsername);
+        return locData;
+      }
+
+      if (localData) return localData;
+
+      if (locData) {
+        localStorage.setItem('academia_fees', JSON.stringify(locData));
+        localStorage.setItem('academia_fees_user', sessionUsername);
+        return locData;
       }
 
       return null;
@@ -258,31 +275,35 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
 
   const [calendarData, setCalendarData] =
     useState<any | null>(() => {
-      if (location.state?.data?.calendar) {
-        localStorage.setItem('academia_calendar', JSON.stringify(location.state.data.calendar));
-        localStorage.setItem('academia_calendar_user', sessionUsername);
-        return location.state.data.calendar;
-      }
+      const cached = localStorage.getItem('academia_calendar');
+      const cachedUser = localStorage.getItem('academia_calendar_user');
+      const creds = JSON.stringify({ username: sessionUsername });
 
-      const cached =
-        localStorage.getItem('academia_calendar');
-
-      const cachedUser =
-        localStorage.getItem('academia_calendar_user');
-
-      const creds =
-        JSON.stringify({ username: sessionUsername });
-
+      let localData = null;
       if (cached && cachedUser && creds) {
         try {
           const { username } = JSON.parse(creds);
-
           if (username === cachedUser) {
-            return JSON.parse(cached);
+            localData = JSON.parse(cached);
           }
         } catch (e) {
-          // Ignore invalid cached data
+          // Ignore
         }
+      }
+
+      const locData = location.state?.data?.calendar;
+      if (locData && locData.rows && locData.rows.length > 0) {
+        localStorage.setItem('academia_calendar', JSON.stringify(locData));
+        localStorage.setItem('academia_calendar_user', sessionUsername);
+        return locData;
+      }
+
+      if (localData) return localData;
+
+      if (locData) {
+        localStorage.setItem('academia_calendar', JSON.stringify(locData));
+        localStorage.setItem('academia_calendar_user', sessionUsername);
+        return locData;
       }
 
       return null;

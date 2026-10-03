@@ -19,19 +19,25 @@ async function getEnrichedCachedData(username: string) {
     try {
       const attCache = await cacheGet<any>(`attendance:${username}`);
       if (attCache?.attendance) parsedData.attendance = attCache.attendance;
+      else delete parsedData.attendance;
       
       const gradesCache = await cacheGet<any>(`grades:${username}`);
       if (gradesCache?.marks) parsedData.grades = gradesCache.marks;
+      else delete parsedData.grades;
       if (gradesCache?.cgpa) parsedData.cgpa = gradesCache.cgpa;
+      else delete parsedData.cgpa;
       
       const feesCache = await cacheGet<any>(`fees:${username}`);
       if (feesCache?.fees) parsedData.fees = feesCache.fees;
+      else delete parsedData.fees;
       
       const imCache = await cacheGet<any>(`internalmarks:${username}`);
       if (imCache?.internalMarks) parsedData.internalMarks = imCache.internalMarks;
+      else delete parsedData.internalMarks;
       
       const calCache = await cacheGet<any>(`calendar:${username}`);
       if (calCache?.calendar) parsedData.calendar = calCache.calendar;
+      else delete parsedData.calendar;
     } catch (e) {
       console.error('[Academia Routes] Error enriching cached data from Redis:', e);
     }

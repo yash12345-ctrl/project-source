@@ -23,12 +23,6 @@ const InstallPwaPopup: React.FC = () => {
       return; // Already installed, don't show
     }
 
-    // Has user dismissed recently?
-    const dismissed = localStorage.getItem('pwa_popup_dismissed');
-    if (dismissed && Date.now() - parseInt(dismissed) < 7 * 24 * 60 * 60 * 1000) {
-      return; // Dismissed within the last week
-    }
-
     // Android/Desktop PWA prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -65,7 +59,6 @@ const InstallPwaPopup: React.FC = () => {
 
   const handleDismiss = () => {
     setShowPopup(false);
-    localStorage.setItem('pwa_popup_dismissed', Date.now().toString());
   };
 
   if (!showPopup) return null;
