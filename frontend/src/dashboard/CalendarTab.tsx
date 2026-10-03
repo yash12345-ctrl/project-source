@@ -5,6 +5,23 @@ import { SkeletonLoader } from '../components/SkeletonLoader';
 import './Dashboard.css';
 import './CalenderTab.css';
 
+const GridIcon = () => (
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '13px', height: '13px' }}>
+        <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+        <rect x="9" y="1.5" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+        <rect x="1.5" y="9" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+        <rect x="9" y="9" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+);
+
+const ListIcon = () => (
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '13px', height: '13px' }}>
+        <rect x="1.5" y="2.5" width="13" height="3" rx="1" stroke="currentColor" strokeWidth="1.4" />
+        <rect x="1.5" y="6.5" width="13" height="3" rx="1" stroke="currentColor" strokeWidth="1.4" />
+        <rect x="1.5" y="10.5" width="13" height="3" rx="1" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+);
+
 interface CalendarTabProps {
   calendarData: any | null;
   setCalendarData: (data: any) => void;
@@ -101,6 +118,10 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
   const [captchaStatus, setCaptchaStatus] = useState<{ pending: boolean; base64: string | null }>({ pending: false, base64: null });
   const [captchaInput, setCaptchaInput] = useState('');
   const [activeMonthIdx, setActiveMonthIdx] = useState(0);
+  
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => 
+      typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches ? 'list' : 'grid'
+  );
 
   const username = savedUsername || '';
 
@@ -329,13 +350,34 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
             </div>
           </div>
 
-          <button
-            onClick={() => fetchCalendar('')}
-            className="cal-sync-btn"
-            disabled={loading}
-          >
-            {loading ? 'Syncing…' : 'Sync Again'}
-          </button>
+          <div className="cal-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div className="cal-view-toggle" role="group" aria-label="Calendar layout">
+              <button
+                type="button"
+                className={`cal-toggle-btn ${viewMode === 'grid' ? 'cal-toggle-active' : ''}`}
+                aria-pressed={viewMode === 'grid'}
+                onClick={() => setViewMode('grid')}
+              >
+                <GridIcon /> Grid
+              </button>
+              <button
+                type="button"
+                className={`cal-toggle-btn ${viewMode === 'list' ? 'cal-toggle-active' : ''}`}
+                aria-pressed={viewMode === 'list'}
+                onClick={() => setViewMode('list')}
+              >
+                <ListIcon /> List
+              </button>
+            </div>
+            
+            <button
+              onClick={() => fetchCalendar('')}
+              className="cal-sync-btn"
+              disabled={loading}
+            >
+              {loading ? 'Syncing…' : 'Sync Again'}
+            </button>
+          </div>
         </div>
 
         {error && <p className="cal-error">{error}</p>}
@@ -373,43 +415,77 @@ const CalendarTab: React.FC<CalendarTabProps> = ({ calendarData, setCalendarData
                   </div>
                 </div>
 
-                <div className="cal-weekday-row">
-                  {WEEKDAYS.map(d => (
-                    <span key={d} className="cal-weekday-label">{d}</span>
-                  ))}
-                </div>
-
-                <div className="cal-grid">
-                  {activeGrid.flat().map((cell, idx) => {
-                    if (cell.dayNum === null) {
-                      return <div key={idx} className="cal-cell cal-cell-empty" />;
-                    }
-
-                    const tone = cell.row ? statusTone(cell.row.status) : 'nodata';
-                    const remarkIsMeaningful = hasMeaningfulRemark(cell.row?.remarks);
-                    const tooltip = cell.row
-                      ? `${cell.row.status || ''}${remarkIsMeaningful ? ' — ' + cell.row.remarks : ''}`
-                      : undefined;
-
-                    return (
-                      <div
-                        key={idx}
-                        className={`cal-cell tone-${tone} ${isToday(cell.dayNum) ? 'is-today' : ''}`}
-                        title={tooltip}
-                      >
-                        <span className="cal-cell-daynum">{cell.dayNum}</span>
-
-                        {cell.row?.dayOrder && cell.row.dayOrder !== '-' && (
-                          <span className="cal-cell-dayorder">{cell.row.dayOrder}</span>
-                        )}
-
-                        {remarkIsMeaningful && <span className="cal-cell-dot" />}
+                  {viewMode === 'grid' ? (
+                    <>
+                      <div className="cal-weekday-row">
+                        {WEEKDAYS.map(d => (
+                          <span key={d} className="cal-weekday-label">{d}</span>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
 
-                <div className="cal-legend">
+                      <div className="cal-grid">
+                        {activeGrid.flat().map((cell, idx) => {
+                          if (cell.dayNum === null) {
+                            return <div key={idx} className="cal-cell cal-cell-empty" />;
+                          }
+
+                          const tone = cell.row ? statusTone(cell.row.status) : 'nodata';
+                          const remarkIsMeaningful = hasMeaningfulRemark(cell.row?.remarks);
+                          const tooltip = cell.row
+                            ? `${cell.row.status || ''}${remarkIsMeaningful ? ' — ' + cell.row.remarks : ''}`
+                            : undefined;
+
+                          return (
+                            <div
+                              key={idx}
+                              className={`cal-cell tone-${tone} ${isToday(cell.dayNum) ? 'is-today' : ''}`}
+                              title={tooltip}
+                            >
+                              <span className="cal-cell-daynum">{cell.dayNum}</span>
+
+                              {cell.row?.dayOrder && cell.row.dayOrder !== '-' && (
+                                <span className="cal-cell-dayorder">{cell.row.dayOrder}</span>
+                              )}
+
+                              {remarkIsMeaningful && <span className="cal-cell-dot" />}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="cal-list">
+                      {activeGroup.rows.map((row, idx) => {
+                        const tone = statusTone(row.status);
+                        const isDayToday = isToday(row._date.getDate());
+                        
+                        return (
+                          <div key={idx} className={`cal-list-row tone-${tone} ${isDayToday ? 'is-today' : ''}`}>
+                            <div className="cal-list-date">
+                              <span className="cal-list-daynum">{row._date.getDate()}</span>
+                              <span className="cal-list-weekday">{WEEKDAYS[row._date.getDay()]}</span>
+                            </div>
+                            
+                            <div className="cal-list-info">
+                              <div className="cal-list-info-top">
+                                <span className="cal-list-status">{row.status || 'No Data'}</span>
+                                {row.dayOrder && row.dayOrder !== '-' && (
+                                  <span className="cal-cell-dayorder">{row.dayOrder}</span>
+                                )}
+                              </div>
+                              {hasMeaningfulRemark(row.remarks) && (
+                                <span className="cal-list-remarks">{row.remarks}</span>
+                              )}
+                            </div>
+                            
+                            {isDayToday && <span className="cal-list-today-badge">Today</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="cal-legend">
                   <span className="cal-legend-item">
                     <span className="dot tone-working" /> Working Day
                   </span>

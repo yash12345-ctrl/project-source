@@ -152,7 +152,7 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
   if (internalMarksData && !isAuthError) {
     return (
       <div className="marks-tab">
-        <header className="att-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <header className="att-header" style={{ marginBottom: '1.5rem' }}>
           <div className="att-heading">
             <span className="att-eyebrow">Academic Standing</span>
             <h1 className="att-title">Internal Marks</h1>
@@ -163,24 +163,16 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
               className="att-sync-btn"
               onClick={handleManualSync}
               disabled={loading}
-              style={{
-                background: 'var(--brass, #C9A227)',
-                color: '#14110A',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer'
-              }}
             >
+              <svg fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
               Sync again
             </button>
           )}
           {loading && (
-            <span className="att-sync-btn" style={{ opacity: 0.7, padding: '8px 16px', fontSize: '13px', color: 'var(--text-primary)' }}>
-              Syncing…
-            </span>
+            <button className="att-sync-btn" disabled>
+              <svg className="att-spin" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              Syncing...
+            </button>
           )}
         </header>
 
@@ -206,9 +198,9 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
         </div>}
 
         {subjects.length > 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.25rem', width: '100%' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.25rem', width: '100%' }}>
             {subjects.map((subject, idx) => (
-              <div key={idx} className="marks-semester-card" style={{ padding: '1.25rem 1.5rem', overflow: 'visible' }}>
+              <div key={idx} className="marks-semester-card" style={{ padding: '1.25rem', overflow: 'visible' }}>
                 <div style={{ marginBottom: '1rem' }}>
                   <h3 style={{ margin: '0 0 4px 0', fontFamily: 'Newsreader', fontSize: '18px', color: 'var(--text-primary)' }}>{subject.title}</h3>
                   <span style={{ fontFamily: 'IBM Plex Mono', fontSize: '11px', color: 'var(--text-muted)' }}>{subject.subject}</span>
@@ -254,7 +246,7 @@ const InternalMarksTab: React.FC<InternalMarksTabProps> = ({ internalMarksData, 
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {subject.marks.map((row: any, i: number) => (
-                    <div key={i} className="marks-row" style={{ padding: '1rem 1.25rem' }}>
+                    <div key={i} className="marks-row" style={{ padding: '0.85rem 1rem' }}>
                       <div className="marks-row-info">
                         <span className="marks-row-title">{row.description}</span>
                       </div>

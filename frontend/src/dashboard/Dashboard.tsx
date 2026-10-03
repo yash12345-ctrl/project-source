@@ -17,7 +17,6 @@ import CalendarTab from './CalendarTab';
 import CalculatorTab from './CalculatorTab';
 import ComingSoon from './coming_soon/ComingSoon';
 import SplashScreen from './splash_screen/SplashScreen';
-import Study from './Study';
 import Sem1 from './Sem1';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { useTheme } from '../context/ThemeContext';
@@ -1083,7 +1082,7 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
               ) : activeTab === 'mess' ? (
                 <ComingSoon featureName="Mess Menu" />
               ) : activeTab === 'study' ? (
-                <Study onSelectSemester={(sem) => { if (sem === 1) setActiveTab('sem1'); }} />
+                <ComingSoon featureName="Study Materials" />
               ) : activeTab === 'sem1' ? (
                 <Sem1 onBack={() => setActiveTab('study')} />
               ) : activeTab === 'marks' ? (

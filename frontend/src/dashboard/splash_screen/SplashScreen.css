@@ -99,12 +99,21 @@
   color: transparent;
 }
 
+.splash-subtitle-wrapper {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
 .splash-subtitle {
   font-size: 0.9rem;
   color: var(--text-secondary);
-  margin-bottom: 3rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  margin: 0;
+  line-height: 1.4;
   animation: blinkText 2s infinite ease-in-out;
 }
 
@@ -254,7 +263,10 @@
 
   .splash-subtitle {
     font-size: 0.8rem;
-    margin-bottom: 2rem;
+  }
+
+  .splash-subtitle-wrapper {
+    margin-bottom: 1.5rem;
   }
 
   .splash-orb-1 {

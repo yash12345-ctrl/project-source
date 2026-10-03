@@ -292,13 +292,114 @@ const CalculatorTab: React.FC = () => {
         }
 
         @media (max-width: 640px) {
+          .gc-tabs { flex-direction: row; gap: 0.5rem; margin-bottom: 1.25rem; }
+          .gc-tab { flex: 1; text-align: center; padding: 0.75rem 0.5rem; border: 1px solid var(--line-soft); border-radius: 8px; font-size: 0.85rem; }
+          .gc-tab.active { background: var(--brass-tint); border-color: var(--brass); }
+          .gc-tab::after { display: none; }
+          
+          .gc-panel { padding: 1.5rem 1.1rem; border-left: none; border-top: 3px solid var(--brass); }
+
           .gc-ledger thead { display: none; }
-          .gc-ledger, .gc-ledger tbody, .gc-ledger tr, .gc-ledger td { display: block; width: 100%; }
-          .gc-ledger tr { border-bottom: 1px solid var(--line); padding: 0.75rem 0; }
-          .gc-ledger td { border: none !important; padding: 0.35rem 0 !important; }
-          .gc-field[type="number"] { max-width: 100%; }
-          .gc-footer { flex-direction: column; align-items: stretch; }
-          .gc-result { min-width: 0; }
+          .gc-ledger, .gc-ledger tbody { display: block; width: 100%; }
+          .gc-ledger tr { 
+            position: relative;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 1rem;
+            row-gap: 0.4rem;
+            background: var(--plate);
+            border: 1px solid var(--line-soft); 
+            border-radius: 14px;
+            padding: 1.25rem; 
+            margin-bottom: 1.25rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+          }
+          .gc-ledger td { 
+            border: none !important; 
+            padding: 0 !important; 
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.35rem;
+          }
+          .gc-ledger td:nth-child(1) { grid-column: 1 / -1; margin-bottom: 0.5rem; padding-right: 2rem !important; }
+          .gc-ledger td:nth-child(2) { grid-column: 1 / 2; }
+          .gc-ledger td:nth-child(3) { grid-column: 2 / 3; }
+
+          .gc-ledger td::before {
+            content: attr(data-label);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--slate);
+          }
+          
+          .gc-field {
+            text-align: left;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid var(--line);
+            padding: 0.6rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+          }
+          
+          .gc-field:focus {
+            border-color: var(--brass);
+            background: transparent;
+            box-shadow: 0 0 0 3px var(--brass-tint);
+          }
+          
+          /* Hide number steppers completely */
+          .gc-field[type="number"]::-webkit-inner-spin-button, 
+          .gc-field[type="number"]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+          }
+          .gc-field[type="number"] {
+            -moz-appearance: textfield;
+          }
+          
+          select.gc-field {
+            padding-right: 1.5rem;
+          }
+
+          /* Sleek circular remove button */
+          .gc-ledger td:last-child {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: auto;
+            padding: 0 !important;
+            grid-column: unset;
+          }
+          .gc-ledger td:last-child::before {
+            display: none;
+          }
+          .gc-remove {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-size: 1.1rem;
+            border: none;
+            background: rgba(226, 124, 109, 0.1);
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 0;
+            padding-bottom: 2px;
+          }
+          .gc-remove:hover {
+            background: var(--danger);
+            color: #fff;
+          }
+
+          .gc-footer { flex-direction: column-reverse; align-items: stretch; gap: 1rem; margin-top: 0.5rem; }
+          .gc-add { align-self: stretch; text-align: center; padding: 0.9rem; border: 1px dashed var(--brass); border-radius: 12px; }
+          .gc-result { min-width: 0; padding: 1.5rem; align-items: center; text-align: center; border-radius: 14px; }
         }
       `}</style>
 

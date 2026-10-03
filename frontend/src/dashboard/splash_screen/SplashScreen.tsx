@@ -80,8 +80,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ theme = 'dark' }) => {
         <h1 className="splash-title">
           <span className="gradient-text">Academia</span>
         </h1>
-        <div style={{ height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
-          <p className="splash-subtitle" style={{ margin: 0, animation: 'fadeInOut 2.5s ease-in-out infinite alternate' }}>
+        <div className="splash-subtitle-wrapper">
+          <p className="splash-subtitle" style={{ animation: 'fadeInOut 2.5s ease-in-out infinite alternate' }}>
             {messages[messageIndex]}
           </p>
         </div>
