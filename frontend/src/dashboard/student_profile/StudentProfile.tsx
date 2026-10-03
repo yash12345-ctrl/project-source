@@ -115,6 +115,8 @@ const StudentProfile: React.FC<StudentProfileProps> = ({
     data,
     cgpa,
     attendancePercent,
+    totalAttended,
+    totalClasses,
     todayDayOrder
 }) => {
     const [copied, setCopied] = useState(false);
@@ -181,10 +183,6 @@ const StudentProfile: React.FC<StudentProfileProps> = ({
         {
             label: 'Status',
             value: data?.profile?.enrollmentStatus,
-        },
-        {
-            label: 'Platform',
-            value: 'SRM Academia',
         },
         {
             label: 'Last Synced',
@@ -315,22 +313,24 @@ const StudentProfile: React.FC<StudentProfileProps> = ({
                         </span>
                     </button>
 
-                    <span className="status-pill">
-                        <span className="status-dot" />
-                        Active Student
-                    </span>
-
-                    {todayDayOrder && (
-                        <span className="status-pill" style={{ marginLeft: '10px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#a0aec0', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                                <line x1="16" y1="2" x2="16" y2="6" />
-                                <line x1="8" y1="2" x2="8" y2="6" />
-                                <line x1="3" y1="10" x2="21" y2="10" />
-                            </svg>
-                            Day Order {todayDayOrder.replace(/day/i, '').trim()}
+                    <div className="profile-badges">
+                        <span className="status-pill">
+                            <span className="status-dot" />
+                            Active Student
                         </span>
-                    )}
+
+                        {todayDayOrder && (
+                            <span className="status-pill day-order-pill">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                    <line x1="16" y1="2" x2="16" y2="6" />
+                                    <line x1="8" y1="2" x2="8" y2="6" />
+                                    <line x1="3" y1="10" x2="21" y2="10" />
+                                </svg>
+                                Day Order {todayDayOrder.replace(/day/i, '').trim()}
+                            </span>
+                        )}
+                    </div>
 
                 </div>
 
@@ -342,6 +342,7 @@ const StudentProfile: React.FC<StudentProfileProps> = ({
                         {/* ATTENDANCE */}
 
                         {hasValidAttendance && (
+                            <div className="attendance-card">
                             <div
                                 className={`stat-gauge tone-${attendanceTone}`}
                             >
@@ -380,6 +381,27 @@ const StudentProfile: React.FC<StudentProfileProps> = ({
 
                                 </div>
                             </div>
+
+                            <div className={`attendance-meta tone-${attendanceTone}`}>
+                                <span className="attendance-meta-title">
+                                    {attendanceTone === 'good'
+                                        ? 'On track'
+                                        : attendanceTone === 'warn'
+                                            ? 'Near the limit'
+                                            : 'Below 65%'}
+                                </span>
+                                {Number(totalClasses) > 0 && (
+                                    <span className="attendance-meta-line">
+                                        {totalAttended} of {totalClasses} classes attended
+                                    </span>
+                                )}
+                                <span className="attendance-meta-hint">
+                                    {attendanceTone === 'good'
+                                        ? 'Above the 75% requirement'
+                                        : 'Minimum required is 75%'}
+                                </span>
+                            </div>
+                            </div>
                         )}
 
                         {/* CGPA */}
@@ -409,7 +431,7 @@ const StudentProfile: React.FC<StudentProfileProps> = ({
 
                 {rows.map((row, i) => (
                     <div
-                        className="ledger-row"
+                        className={`ledger-row ${['Program', 'Department', 'Last Synced'].includes(row.label) ? 'wide' : ''}`}
                         key={i}
                         style={{
                             animationDelay: `${i * 60}ms`,

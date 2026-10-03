@@ -59,6 +59,20 @@ const TopBar: React.FC<TopBarProps> = ({
 
     return (
         <header className="top-header">
+            <div className="topbar-brand" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="topbar-gold" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+                            <stop stopColor="#FEF3C7" />
+                            <stop offset="0.45" stopColor="#FBBF24" />
+                            <stop offset="1" stopColor="#B45309" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M2.5 8.5L7 12L12 5L17 12L21.5 8.5L19.5 17H4.5L2.5 8.5Z" fill="url(#topbar-gold)" />
+                    <rect x="4.5" y="18.5" width="15" height="2" rx="1" fill="url(#topbar-gold)" />
+                </svg>
+            </div>
+
             <div className="welcome-text">
                 <span className="eyebrow">{activeTab.toUpperCase().replace('-', ' ')}</span>
                 <h1>{getPageTitle(activeTab)}</h1>

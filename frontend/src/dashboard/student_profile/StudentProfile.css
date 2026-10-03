@@ -925,3 +925,394 @@
         border-top-color: rgba(0, 0, 0, 0.08);
     }
 }
+
+/* =========================================
+   BADGES (Active + Day Order)
+========================================= */
+
+.profile-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 0.5rem;
+}
+
+.profile-badges .status-pill {
+    margin-top: 0;
+}
+
+.day-order-pill {
+    background: rgba(255, 255, 255, 0.05);
+    color: #a0aec0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='light'] .day-order-pill {
+    background: #f8fafc;
+    color: #475569;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.profile-name {
+    overflow-wrap: anywhere;
+}
+
+.ledger-value {
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+
+/* =========================================
+   MOBILE — CARD LAYOUT (kept last on purpose)
+========================================= */
+
+@media (max-width: 640px) {
+
+    .student-profile {
+        gap: 0.9rem;
+        max-width: 100%;
+    }
+
+    .profile-hero {
+        gap: 1rem;
+        padding: 1.5rem 1rem 1.25rem;
+        border-radius: 22px;
+    }
+
+    .profile-avatar-ring {
+        width: 88px;
+        height: 88px;
+    }
+
+    .profile-avatar {
+        font-size: 30px;
+    }
+
+    .profile-heading {
+        min-width: 0;
+        width: 100%;
+        gap: 0.35rem;
+    }
+
+    .profile-name {
+        font-size: 24px;
+        line-height: 1.2;
+    }
+
+    .profile-regno {
+        font-size: 13px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+        align-self: center;
+    }
+
+    [data-theme='light'] .profile-regno {
+        background: #f8fafc;
+        border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .copy-toast {
+        top: calc(100% + 6px);
+        left: 50%;
+    }
+
+    .profile-badges {
+        justify-content: center;
+        margin-top: 0.4rem;
+    }
+
+    /* Stats: two side-by-side tiles */
+    .profile-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        align-items: center;
+        justify-items: center;
+        gap: 0.75rem;
+        padding-top: 1.1rem;
+        width: 100%;
+    }
+
+    .stat-chip {
+        width: 100%;
+        min-height: 108px;
+        padding: 0.9rem 0.5rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+    }
+
+    [data-theme='light'] .stat-chip {
+        background: #f8fafc;
+        border-color: rgba(0, 0, 0, 0.06);
+    }
+
+    .stat-chip-value {
+        font-size: 30px;
+    }
+
+    /* Ledger becomes a 2-column grid of cards */
+    .student-profile .profile-ledger {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem;
+        padding: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    .student-profile .ledger-row {
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 0.5rem;
+        padding: 0.95rem 0.9rem;
+        min-width: 0;
+        border: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+        border-radius: 16px;
+        background: var(--ink-panel, #10141D);
+    }
+
+    [data-theme='light'] .student-profile .ledger-row {
+        background: #ffffff;
+        border-color: rgba(0, 0, 0, 0.07);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    }
+
+    .student-profile .ledger-row.wide {
+        grid-column: 1 / -1;
+    }
+
+    .ledger-label {
+        font-size: 10px;
+        letter-spacing: 1px;
+    }
+
+    .ledger-value {
+        font-size: 14px;
+        line-height: 1.35;
+        text-align: left;
+        padding-left: 0;
+    }
+}
+
+/* Attendance card wrapper — plain on desktop, rich on mobile */
+.attendance-card {
+    display: flex;
+    align-items: center;
+}
+
+.attendance-meta {
+    display: none;
+}
+
+@media (max-width: 640px) {
+
+    .profile-hero::after {
+        content: '';
+        position: absolute;
+        top: -60px;
+        left: 50%;
+        width: 220px;
+        height: 220px;
+        transform: translateX(-50%);
+        background: radial-gradient(circle, rgba(201, 162, 39, 0.16), transparent 70%);
+        pointer-events: none;
+    }
+
+    .profile-hero>* {
+        position: relative;
+        z-index: 1;
+    }
+
+    .profile-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .attendance-card {
+        grid-column: 1 / -1;
+        width: 100%;
+        justify-content: flex-start;
+        gap: 1rem;
+        padding: 0.9rem 1rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+        text-align: left;
+    }
+
+    [data-theme='light'] .attendance-card {
+        background: #f8fafc;
+        border-color: rgba(0, 0, 0, 0.06);
+    }
+
+    .attendance-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .attendance-meta-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--teal, #2DD4BF);
+    }
+
+    .attendance-meta.tone-warn .attendance-meta-title {
+        color: var(--brass-soft, #E8C766);
+    }
+
+    .attendance-meta.tone-low .attendance-meta-title {
+        color: var(--danger, #E5675A);
+    }
+
+    .attendance-meta-line {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-primary, #F2EFE7);
+    }
+
+    .attendance-meta-hint {
+        font-size: 12px;
+        color: var(--text-muted, #757D8F);
+    }
+
+    [data-theme='light'] .attendance-meta-line {
+        color: #0f172a;
+    }
+
+    /* A lone CGPA tile should span the row */
+    .stat-chip:only-child {
+        grid-column: 1 / -1;
+    }
+}
+
+/* ===== Mobile hero: side-by-side (avatar | details) ===== */
+@media (max-width: 640px) {
+
+    .student-profile .profile-hero {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-start;
+        text-align: left;
+        gap: 1rem;
+        padding: 1.25rem 1rem;
+    }
+
+    .student-profile .profile-avatar-ring {
+        width: 76px;
+        height: 76px;
+        flex-shrink: 0;
+    }
+
+    .student-profile .profile-avatar {
+        font-size: 26px;
+    }
+
+    .student-profile .profile-heading {
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .student-profile .profile-eyebrow {
+        font-size: 9.5px;
+        letter-spacing: 1.3px;
+    }
+
+    .student-profile .profile-name {
+        font-size: 20px;
+        line-height: 1.2;
+        text-align: left;
+    }
+
+    .student-profile .profile-regno {
+        align-self: flex-start;
+        justify-content: flex-start;
+        font-size: 11.5px;
+        letter-spacing: 0.5px;
+        padding: 5px 10px;
+    }
+
+    .student-profile .copy-toast {
+        left: auto;
+        right: 0;
+        top: calc(100% + 6px);
+        transform: scale(0.9);
+    }
+
+    .student-profile .copy-toast.show {
+        transform: scale(1);
+    }
+
+    .student-profile .profile-badges {
+        justify-content: flex-start;
+        gap: 6px;
+        margin-top: 0.3rem;
+    }
+
+    .student-profile .status-pill {
+        font-size: 11px;
+        padding: 4px 10px 4px 8px;
+    }
+
+    /* Stats row sits under, full width */
+    .student-profile .profile-stats {
+        flex: 1 1 100%;
+        width: 100%;
+        padding-top: 1rem;
+    }
+
+    .attendance-card {
+        padding: 0.8rem 0.9rem;
+        gap: 0.9rem;
+    }
+
+    .attendance-meta-title {
+        font-size: 15px;
+    }
+
+    .attendance-meta-line,
+    .attendance-meta-hint {
+        line-height: 1.35;
+    }
+}
+
+@media (max-width: 360px) {
+    .student-profile .profile-avatar-ring {
+        width: 60px;
+        height: 60px;
+    }
+
+    .student-profile .profile-avatar {
+        font-size: 21px;
+    }
+
+    .student-profile .profile-name {
+        font-size: 18px;
+    }
+}
+
+/* Very small phones */
+@media (max-width: 360px) {
+    .profile-name {
+        font-size: 21px;
+    }
+
+    .student-profile .profile-ledger {
+        grid-template-columns: 1fr;
+    }
+
+    .student-profile .ledger-row {
+        grid-column: auto;
+    }
+}

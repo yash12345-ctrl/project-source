@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 // Import newly created sidebar components
 import Sidebar from './sidebar/Sidebar';
 import TopBar from './sidebar/TopBar';
+import MobileNav from './sidebar/MobileNav';
 
 import StudentProfile from './student_profile/StudentProfile';
 import CoursePage from './course_page/CoursePage';
@@ -1133,6 +1134,12 @@ const DashboardInner: React.FC<{sessionUsername: string}> = ({ sessionUsername }
         </div>
 
           </main>
+
+          <MobileNav
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            handleLogout={handleLogout}
+          />
         </>
       )}
 

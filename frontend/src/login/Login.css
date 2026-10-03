@@ -66,7 +66,7 @@
   animation: fadeUp 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-.brand-logo {
+.unified-layout .brand-logo {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -107,7 +107,7 @@
   line-height: 1;
 }
 
-.brand-name {
+.unified-layout .brand-name {
   font-family: 'Playfair Display', Georgia, serif;
   font-size: 30px;
   font-weight: 700;
@@ -128,7 +128,7 @@
   color: rgba(253, 230, 138, 0.75);
 }
 
-.premium-icon {
+.unified-layout .premium-icon {
   filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.7));
 }
 
@@ -142,7 +142,7 @@
   100% { background-position: -100% 0; }
 }
 
-.eyebrow {
+.unified-layout .eyebrow {
   display: inline-block;
   padding: 6px 14px;
   margin-bottom: 20px;
@@ -454,7 +454,7 @@
     align-items: center;
   }
 
-  .brand-logo { margin-bottom: 24px; }
+  .unified-layout .brand-logo { margin-bottom: 24px; }
   .marketing-text p { margin: 0 auto; font-size: 16px; }
   .feature-list { justify-content: center; margin-top: 24px; }
   .form-side { flex: none; max-width: 480px; }
@@ -469,16 +469,16 @@
   }
   .form-side { max-width: none; }
 
-  .brand-name { font-size: 24px; }
+  .unified-layout .brand-name { font-size: 24px; }
   .brand-tagline { font-size: 9px; letter-spacing: 3px; }
-  .brand-logo { gap: 12px; margin-bottom: 18px; }
+  .unified-layout .brand-logo { gap: 12px; margin-bottom: 18px; }
   .brand-badge { width: 46px; height: 46px; border-radius: 15px; }
   .brand-badge svg { width: 24px; height: 24px; }
   .marketing-side { align-items: center; }
   .marketing-text { text-align: center; }
   .marketing-text h1 { font-size: 26px; line-height: 1.2; letter-spacing: -0.5px; margin-bottom: 0; }
   .marketing-text p { display: none; }
-  .eyebrow { display: none; }
+  .unified-layout .eyebrow { display: none; }
   .feature-list { display: none; }
 
   .glass-panel { padding: 28px 20px; border-radius: 22px; }
